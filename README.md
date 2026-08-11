@@ -125,17 +125,17 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 ### v1 — In progress
 
 - [x] Project setup, repo, README, architecture doc
-- [ ] MySQL schema + SQLAlchemy models + Alembic migrations
-- [ ] GitHub Actions CI pipeline
-- [ ] Playwright scraper (Internshala) with Page Object Model
-- [ ] Remotive API client
-- [ ] Skill extractor + analyzer
-- [ ] Flask auth + user preferences
-- [ ] Email notifier
-- [ ] Telegram notifier
+- [x] SQLite/MySQL schema + SQLAlchemy models + Alembic migrations
+- [x] GitHub Actions CI pipeline
+- [x] Playwright scraper (Internshala) with Page Object Model
+- [x] Remotive API client
+- [x] Skill extractor + analyzer (trend computation)
+- [x] Flask auth + user preferences
+- [ ] Email notifier — in progress
+- [ ] Telegram notifier — in progress
 - [ ] Gemini Q&A endpoint
-- [ ] pytest suite: unit, integration, API, E2E
-- [ ] ≥70% coverage
+- [x] pytest suite: unit, integration, API (E2E still pending)
+- [x] ≥70% coverage (99% on covered modules as of the auth skeleton)
 - [ ] Structured JSON logging
 - [ ] Render deployment
 
