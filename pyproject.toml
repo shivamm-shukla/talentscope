@@ -11,6 +11,9 @@ requires-python = ">=3.11"
 license = { file = "LICENSE" }
 dependencies = [
     "alembic>=1.13,<2.0",
+    "bcrypt>=4.0,<6.0",
+    "Flask>=3.0,<4.0",
+    "Flask-Login>=0.6,<1.0",
     "SQLAlchemy>=2.0,<3.0",
 ]
 
@@ -25,7 +28,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["analysis", "core", "db", "matching", "sources", "workers"]
+packages = ["analysis", "auth", "core", "db", "matching", "sources", "web", "workers"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=core --cov=db --cov-report=term-missing --cov-fail-under=70"

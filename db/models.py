@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from flask_login import UserMixin
 from sqlalchemy import (
     JSON,
     DateTime,
@@ -46,7 +47,7 @@ class Job(Base):
     )
 
 
-class User(Base):
+class User(UserMixin, Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
