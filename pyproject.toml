@@ -23,7 +23,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["core", "db"]
+packages = ["core", "db", "sources"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=core --cov=db --cov-report=term-missing --cov-fail-under=70"

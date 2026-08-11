@@ -1,0 +1,23 @@
+{
+  "jobs": [
+    {
+      "title": "Python Intern",
+      "company_name": "Example Labs",
+      "candidate_required_location": "Worldwide",
+      "url": "https://remotive.com/remote-jobs/software-dev/python-intern-1",
+      "publication_date": "2026-08-10T12:30:00Z",
+      "salary": "$1,000/month",
+      "tags": ["python", "flask"],
+      "description": "<p>Build <strong>useful</strong> things.</p>"
+    },
+    {
+      "title": "Older Data Intern",
+      "company_name": "Archive Co",
+      "candidate_required_location": "Remote",
+      "url": "https://remotive.com/remote-jobs/data/older-data-intern-2",
+      "publication_date": "2026-08-01T12:30:00Z",
+      "tags": "not-a-list",
+      "description": "Data work"
+    }
+  ]
+}
