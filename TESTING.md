@@ -12,7 +12,7 @@ test in isolation, and the CI gate.
 | **Unit** | `core/`, `analysis/`, `matching/` — pure functions and domain logic | Nothing external | `pytest`, plain asserts |
 | **Integration** | `sources/` against saved fixtures, `db/` against SQLite in-memory | SQLite, fixture files | `pytest`, SQLite |
 | **API** | Every Flask endpoint in `web/`: status code, JSON schema, auth | Flask test client, fake service implementations | `pytest-flask`, `jsonschema` |
-| **E2E** | One full user journey: signup → set preferences → see matched jobs | Full stack, headless browser | `pytest`, Selenium headless |
+| **E2E** | One full user journey: signup → set preferences → see matched jobs | Full stack, headless browser | `pytest`, Playwright headless |
 
 Coverage target: **≥70%**, enforced in CI via `pytest --cov-fail-under=70`. This was the
 original target and isn't being revised — it's a reasonable bar for a solo/small-cohort

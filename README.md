@@ -33,14 +33,14 @@ TalentScope addresses each of these explicitly. The product value is for student
 
 ### For users (students looking for internships)
 
-- **Daily-curated internship feed** scraped from Internshala (Selenium) and Remotive API
+- **Daily-curated internship feed** scraped from Internshala (Playwright) and Remotive API
 - **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences
 - **Market trends dashboard** — which skills are rising, which cities are hiring, stipend distributions
 - **Natural-language Q&A** — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
 
 ### For me (the engineer)
 
-- A real codebase demonstrating SDET fundamentals end-to-end: unit, integration, API contract, and Selenium E2E tests
+- A real codebase demonstrating SDET fundamentals end-to-end: unit, integration, API contract, and Playwright E2E tests
 - A CI pipeline that gates merges on tests passing
 - Structured JSON logging suitable for log-analysis tooling
 - A deployable Flask app with MySQL persistence and Alembic migrations
@@ -52,7 +52,7 @@ TalentScope addresses each of these explicitly. The product value is for student
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │  Internshala │     │   Remotive   │     │    Gemini    │
-│  (Selenium)  │     │    (REST)    │     │     (AI)     │
+│ (Playwright)  │     │    (REST)    │     │     (AI)     │
 └──────┬───────┘     └──────┬───────┘     └──────┬───────┘
        │                    │                    │
        └────────┬───────────┘                    │
@@ -88,7 +88,7 @@ A more detailed walkthrough of design decisions lives in [`ARCHITECTURE.md`](./A
 | Web | Flask | Lightweight, well-tested, matches scope |
 | ORM | SQLAlchemy + Alembic | Same code runs against MySQL (prod) and SQLite (tests) |
 | DB | MySQL 8 / SQLite (test) | Production-realistic; tests stay fast |
-| Scraping | Selenium 4 + Page Object Model | Handles dynamic Internshala pages |
+| Scraping | Playwright + pytest-playwright | Handles dynamic Internshala pages |
 | Scheduling | APScheduler | In-process, no separate worker needed for v1 |
 | Auth | Flask-Login + bcrypt | Standard, well-understood |
 | Email | Flask-Mail (Gmail SMTP) | Free tier, sufficient for cohort scale |
@@ -110,7 +110,7 @@ The test suite is the centerpiece of this project. Tests live in `tests/` and ar
 | **Unit** | Pure functions: skill extractor, salary normaliser, match logic | `pytest`, mocks |
 | **Integration** | Scraper → DB pipeline against saved HTML fixtures (no live network) | `pytest`, SQLite in-memory |
 | **API** | Every Flask endpoint: status code, JSON schema, auth | `pytest-flask`, `jsonschema` |
-| **E2E (Selenium)** | One full user journey: signup → set preferences → see matched jobs | `pytest`, Selenium headless |
+| **E2E (Playwright)** | One full user journey: signup → set preferences → see matched jobs | `pytest`, Playwright headless |
 
 **Why fixtures, not live scraping in tests:** the scraper is tested against saved Internshala HTML files committed to `tests/fixtures/`. This keeps CI deterministic, fast, and independent of Internshala's uptime — the same principle used in production SDET teams.
 
@@ -127,7 +127,7 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [x] Project setup, repo, README, architecture doc
 - [ ] MySQL schema + SQLAlchemy models + Alembic migrations
 - [ ] GitHub Actions CI pipeline
-- [ ] Selenium scraper (Internshala) with Page Object Model
+- [ ] Playwright scraper (Internshala) with Page Object Model
 - [ ] Remotive API client
 - [ ] Skill extractor + analyzer
 - [ ] Flask auth + user preferences

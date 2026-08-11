@@ -47,7 +47,7 @@ talentscope/
     unit/         # core/, analysis/, matching/ — no DB, no network.
     integration/  # sources/ + db/, against fixtures — no live network.
     api/          # web/ Flask endpoints.
-    e2e/          # Selenium, one full user journey.
+    e2e/          # Playwright, one full user journey.
 ```
 
 **Dependency rule:** arrows only point toward `core/`. `web/` and `workers/` are the only
@@ -251,7 +251,7 @@ in a state where a previous PR's tests are broken by a later one.
    where the full pipeline runs end-to-end.
 9. **`ai/` — Gemini `QAEngine`** — single-query Q&A endpoint, API tests with a fake
    `QAEngine` for deterministic tests plus one gated live-Gemini smoke test.
-10. **E2E test** — signup → set preferences → see matched jobs, Selenium headless,
+10. **E2E test** — signup → set preferences → see matched jobs, Playwright headless,
     against the full stack from steps 2-8.
 11. **Structured logging + deploy to Render** — matches original README's ops goals.
 
@@ -265,8 +265,7 @@ sequence lands — see [BACKLOG.md](./BACKLOG.md).
   but ties scheduler uptime to web uptime (and vice versa — a stuck scrape could affect
   web responsiveness if not run in a background thread carefully). Leaning separate
   process for isolation, but this is a judgment call to confirm before PR #8.
-- **Internshala scraping approach:** the original stack choice was Selenium (dynamic
-  pages); the old prototype code actually used `requests`+`BeautifulSoup` successfully.
-  Worth deciding which to target before PR #3 — Selenium is heavier (browser driver in
-  CI) but more resilient to JS-rendered content; `requests`+`BeautifulSoup` is lighter
-  and was apparently sufficient in practice.
+
+## Resolved implementation decisions
+
+- **Internshala scraping: Playwright.** Its locator auto-waiting and browser context isolation make dynamic-page scraping and the eventual E2E suite more deterministic in CI. Use Chromium initially; install its browser binary explicitly in CI. `requests`+`BeautifulSoup` is not the primary adapter for this JS-rendered source.

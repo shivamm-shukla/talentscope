@@ -67,6 +67,3 @@ Carried from ARCHITECTURE.md's open questions so they don't get lost:
 
 - Scheduler process topology — in-process APScheduler inside the Flask app vs. a small
   separate scheduler process. Needs a decision before build sequence step 8.
-- Internshala scraping approach — Selenium (original stack choice, handles JS-rendered
-  content) vs. `requests`+`BeautifulSoup` (lighter, no browser driver in CI). Needs a
-  decision before build sequence step 3.
