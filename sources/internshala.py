@@ -109,7 +109,9 @@ def _fetch_listing_html(url: str) -> str:
         context = browser.new_context()
         page = context.new_page()
         page.goto(url, wait_until="domcontentloaded")
-        page.locator("script[type='application/ld+json']").first.wait_for()
+        page.locator("script[type='application/ld+json']").first.wait_for(
+            state="attached"
+        )
         html = page.content()
         context.close()
         browser.close()
