@@ -4,13 +4,14 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from db.models import Base
+from db.session import normalize_database_url
 
 config = context.config
 target_metadata = Base.metadata
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(database_url))
 
 
 def run_migrations_offline() -> None:
