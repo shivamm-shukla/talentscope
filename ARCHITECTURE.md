@@ -122,8 +122,11 @@ Core tables, replacing the CSV-based storage from the original prototype:
   Phase C's approval layer has a substrate to build on rather than needing a schema
   migration plus a retrofit of an audit trail.
 
-SQLAlchemy + Alembic, MySQL in production / SQLite in tests — this was already the right
-call in the original README and isn't being revisited.
+SQLAlchemy + Alembic, Postgres in production / SQLite in tests. Originally planned as
+MySQL, revised when picking a free-forever deployment target: Render's only managed
+database is Postgres, and Neon's free Postgres tier (scale-to-zero compute, no 30-day
+expiry) is what backs production. SQLAlchemy makes this a driver + connection-string
+change (`psycopg`), not a rewrite — no ORM code depends on a MySQL-specific feature.
 
 ## Orchestration: is a job/event queue needed now?
 

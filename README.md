@@ -43,7 +43,7 @@ TalentScope addresses each of these explicitly. The product value is for student
 - A real codebase demonstrating SDET fundamentals end-to-end: unit, integration, API contract, and Playwright E2E tests
 - A CI pipeline that gates merges on tests passing
 - Structured JSON logging suitable for log-analysis tooling
-- A deployable Flask app with MySQL persistence and Alembic migrations
+- A deployable Flask app with Postgres persistence and Alembic migrations
 
 ---
 
@@ -64,7 +64,7 @@ TalentScope addresses each of these explicitly. The product value is for student
         └───────┬───────┘                        │
                 ▼                                │
         ┌───────────────┐      ┌─────────────────▼──┐
-        │     MySQL     │◄─────┤   Flask Web App     │
+        │    Postgres   │◄─────┤   Flask Web App     │
         │ (jobs, users, │      │ (auth, dashboard,   │
         │  preferences) │      │  REST API, Q&A)     │
         └───────┬───────┘      └──────────┬─────────┘
@@ -86,8 +86,8 @@ A more detailed walkthrough of design decisions lives in [`ARCHITECTURE.md`](./A
 |---|---|---|
 | Language | Python 3.11 | Familiarity + ecosystem |
 | Web | Flask | Lightweight, well-tested, matches scope |
-| ORM | SQLAlchemy + Alembic | Same code runs against MySQL (prod) and SQLite (tests) |
-| DB | MySQL 8 / SQLite (test) | Production-realistic; tests stay fast |
+| ORM | SQLAlchemy + Alembic | Same code runs against Postgres (prod) and SQLite (tests) |
+| DB | Postgres (Neon, free) / SQLite (test) | Free-forever managed Postgres; tests stay fast |
 | Scraping | Playwright + pytest-playwright | Handles dynamic Internshala pages |
 | Scheduling | APScheduler | In-process, no separate worker needed for v1 |
 | Auth | Flask-Login + bcrypt | Standard, well-understood |
@@ -97,7 +97,7 @@ A more detailed walkthrough of design decisions lives in [`ARCHITECTURE.md`](./A
 | Testing | pytest, pytest-cov, pytest-flask, factory_boy, jsonschema | Industry-standard test stack |
 | CI | GitHub Actions | Free for public repos, runs on every push |
 | Logging | structlog (JSON) | Queryable logs — relevant to SDET log-analysis skills |
-| Deployment | Render | Free tier, MySQL add-on available |
+| Deployment | Render (web) + Neon (DB) + GitHub Actions (cron pipeline) | Free-forever stack for solo/cohort use |
 
 ---
 
@@ -138,7 +138,7 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [x] pytest suite: unit, integration, API (E2E still pending)
 - [x] ≥70% coverage (99% on covered modules as of the AI Q&A endpoint)
 - [x] Structured JSON logging
-- [ ] Render deployment
+- [x] Render deployment (code/config ready — see "Deploying" below for the manual account-setup steps)
 
 ### Explicitly out of scope for v1
 
@@ -155,28 +155,56 @@ These are intentional cuts — not forgotten features. Parking lot for v2 in [`B
 
 ## Running locally
 
-> Setup instructions will be finalised once the core skeleton is committed. The intended developer experience:
-
 ```bash
 # Clone and set up
 git clone https://github.com/shivamm-shukla/talentscope.git
 cd talentscope
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -e .[dev]
 
 # Configure
 cp .env.example .env
 # edit .env with DB URL, Gmail credentials, Telegram token, Gemini API key
 
-# Migrate
+# Migrate (defaults to the local SQLite file if DATABASE_URL is unset)
 alembic upgrade head
 
 # Run tests
 pytest
 
 # Run app
-flask --app talentscope run
+flask --app web.app run
 ```
+
+---
+
+## Deploying
+
+Free-forever stack for solo/cohort use: **Render** (web app) + **Neon** (Postgres,
+free tier — chosen over Render's own free Postgres because that one expires after 30
+days) + **GitHub Actions** (cron pipeline, instead of Render's paid-tier-only
+background workers/cron jobs).
+
+1. **Neon** — create a free project at [neon.tech](https://neon.tech), copy its
+   connection string (`postgresql://...`).
+2. **Render** — create a Web Service from this repo using the included
+   [`render.yaml`](./render.yaml) blueprint ("New from Blueprint"). It builds with
+   `pip install .`, runs `alembic upgrade head` before each start, and serves via
+   `gunicorn wsgi:app`. Set these env vars in the Render dashboard (`sync: false` in
+   the blueprint means Render prompts for them instead of storing a value itself):
+   - `DATABASE_URL` — the Neon connection string from step 1
+   - `GEMINI_API_KEY` — from [Google AI Studio](https://aistudio.google.com/)
+   - `GEMINI_MODEL` — optional, defaults to `gemini-flash-latest`
+3. **GitHub Actions** — add these as repo secrets (Settings → Secrets and variables →
+   Actions) so [`.github/workflows/pipeline.yml`](./.github/workflows/pipeline.yml) can
+   run the scrape/analyze/match/notify pipeline on its 6-hour cron:
+   - `DATABASE_URL` — same Neon connection string
+   - `SMTP_SENDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` — for
+     users with `email` in their preferred channels
+   - `TELEGRAM_BOT_TOKEN` — for users with `telegram` in their preferred channels
+
+The web service only serves auth/preferences/matches/Q&A — it never runs the scrape
+pipeline itself, so Render's free-tier idle sleep has no effect on data freshness.
 
 ---
 
