@@ -10,7 +10,7 @@ from auth.passwords import hash_password, verify_password
 from core.interfaces import QAEngine
 from core.models import JobPosting, QueryContext
 from core.models import User as DomainUser
-from db.models import Job, User, UserPreference
+from db.models import Job, Match, User, UserPreference
 
 api = Blueprint("api", __name__)
 
@@ -133,6 +133,36 @@ def preferences():
             preference.minimum_stipend = value
         session.commit()
         return jsonify(_preference_payload(preference))
+
+
+@api.get("/matches")
+@login_required
+def matches():
+    with _session() as session:
+        rows = session.scalars(
+            select(Match)
+            .where(Match.user_id == current_user.id)
+            .join(Match.job)
+            .order_by(Match.score.desc())
+        ).all()
+        return jsonify(
+            [
+                {
+                    "score": match.score,
+                    "reasons": match.reasons,
+                    "matched_at": match.matched_at.isoformat(),
+                    "job": {
+                        "title": match.job.title,
+                        "company": match.job.company,
+                        "location": match.job.location,
+                        "link": match.job.link,
+                        "salary_raw": match.job.salary_raw,
+                        "skills": match.job.skills,
+                    },
+                }
+                for match in rows
+            ]
+        )
 
 
 @api.post("/qa")
