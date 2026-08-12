@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from core.logging import configure_json_logging
 from core.models import JobPosting, UserPreferences
 from db.matches import upsert_match
 from db.models import Job, User
 from db.session import create_engine_and_session
 from matching.matcher import match_jobs
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,6 +81,7 @@ def run(session: Session) -> MatchResult:
 
 
 def main() -> None:
+    configure_json_logging()
     parser = argparse.ArgumentParser(
         description="Match stored jobs to user preferences."
     )
@@ -88,9 +93,13 @@ def main() -> None:
     try:
         with session_factory() as session:
             result = run(session)
-        print(
-            f"Processed {result.users_processed}; created {result.created}; "
-            f"updated {result.updated}."
+        logger.info(
+            "match completed",
+            extra={
+                "users_processed": result.users_processed,
+                "created": result.created,
+                "updated": result.updated,
+            },
         )
     finally:
         engine.dispose()

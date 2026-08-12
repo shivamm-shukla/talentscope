@@ -131,12 +131,13 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [x] Remotive API client
 - [x] Skill extractor + analyzer (trend computation)
 - [x] Flask auth + user preferences
-- [ ] Email notifier — in progress
-- [ ] Telegram notifier — in progress
-- [ ] Gemini Q&A endpoint
-- [x] pytest suite: unit, integration, API, E2E
-- [x] ≥70% coverage (99% on covered modules as of the auth skeleton)
-- [ ] Structured JSON logging
+- [x] Email notifier
+- [x] Telegram notifier
+- [x] APScheduler pipeline wiring (separate process; scrape → analyze → match → notify)
+- [x] Gemini Q&A endpoint
+- [x] pytest suite: unit, integration, API (E2E still pending)
+- [x] ≥70% coverage (99% on covered modules as of the AI Q&A endpoint)
+- [x] Structured JSON logging
 - [ ] Render deployment
 
 ### Explicitly out of scope for v1
