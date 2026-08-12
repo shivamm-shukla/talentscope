@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -11,9 +12,12 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from core.interfaces import JobSource
+from core.logging import configure_json_logging
 from db.jobs import upsert_job
 from db.session import create_engine_and_session
 from sources.registry import create_source
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +42,7 @@ def run(
 
 
 def main() -> None:
+    configure_json_logging()
     parser = argparse.ArgumentParser(
         description="Fetch and persist internship listings."
     )
@@ -59,9 +64,13 @@ def main() -> None:
                 ],
                 session,
             )
-        print(
-            f"Fetched {result.fetched}; created {result.created}; "
-            f"updated {result.updated}."
+        logger.info(
+            "scrape completed",
+            extra={
+                "fetched": result.fetched,
+                "created": result.created,
+                "updated": result.updated,
+            },
         )
     finally:
         engine.dispose()

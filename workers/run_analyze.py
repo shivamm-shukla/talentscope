@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from dataclasses import dataclass
 
@@ -11,8 +12,11 @@ from sqlalchemy.orm import Session
 
 from analysis.salary import normalize_monthly_stipend
 from analysis.skill_extractor import extract_skills
+from core.logging import configure_json_logging
 from db.models import Job
 from db.session import create_engine_and_session
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +53,7 @@ def run(session: Session) -> AnalyzeResult:
 
 
 def main() -> None:
+    configure_json_logging()
     parser = argparse.ArgumentParser(
         description="Normalize stipends and backfill skills for stored jobs."
     )
@@ -60,10 +65,13 @@ def main() -> None:
     try:
         with session_factory() as session:
             result = run(session)
-        print(
-            f"Processed {result.jobs_processed}; "
-            f"normalized salary for {result.salary_normalized}; "
-            f"backfilled skills for {result.skills_backfilled}."
+        logger.info(
+            "analyze completed",
+            extra={
+                "jobs_processed": result.jobs_processed,
+                "salary_normalized": result.salary_normalized,
+                "skills_backfilled": result.skills_backfilled,
+            },
         )
     finally:
         engine.dispose()

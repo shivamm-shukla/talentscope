@@ -7,12 +7,14 @@ import os
 from flask import Flask
 from flask_login import LoginManager
 
+from core.logging import configure_json_logging
 from db.models import Base, User
 from db.session import create_engine_and_session
 from web.routes import api
 
 
 def create_app(config: dict[str, object] | None = None) -> Flask:
+    configure_json_logging()
     app = Flask(__name__)
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "development-only-change-me"),
