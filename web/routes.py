@@ -7,11 +7,10 @@ from sqlalchemy.orm import Session
 
 from ai.registry import create_qa_engine
 from auth.passwords import hash_password, verify_password
-from db.models import Match, User, UserPreference
 from core.interfaces import QAEngine
 from core.models import JobPosting, QueryContext
 from core.models import User as DomainUser
-from db.models import Job, User, UserPreference
+from db.models import Job, Match, User, UserPreference
 
 api = Blueprint("api", __name__)
 
@@ -164,6 +163,8 @@ def matches():
                 for match in rows
             ]
         )
+
+
 @api.post("/qa")
 @login_required
 def qa():
