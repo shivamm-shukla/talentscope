@@ -5,6 +5,7 @@ import pytest
 
 from sources.internshala import InternshalaSource, parse_job_postings
 from sources.registry import create_source
+from sources.remotive import RemotiveSource
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "internshala" / "listings.html"
 
@@ -39,7 +40,12 @@ def test_parser_ignores_invalid_metadata() -> None:
 
 
 def test_source_registry_creates_sources_and_rejects_unknown_names() -> None:
-    assert create_source("internshala").name == "internshala"
-    assert create_source("remotive").name == "remotive"
+    internshala = create_source("internshala")
+    remotive = create_source("remotive")
+
+    assert isinstance(internshala, InternshalaSource)
+    assert internshala.name == "internshala"
+    assert isinstance(remotive, RemotiveSource)
+    assert remotive.name == "remotive"
     with pytest.raises(ValueError, match="Unsupported job source"):
         create_source("unknown")
