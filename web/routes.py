@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from auth.passwords import hash_password, verify_password
-from db.models import User, UserPreference
+from db.models import Match, User, UserPreference
 
 api = Blueprint("api", __name__)
 
@@ -105,3 +105,33 @@ def preferences():
             preference.minimum_stipend = value
         session.commit()
         return jsonify(_preference_payload(preference))
+
+
+@api.get("/matches")
+@login_required
+def matches():
+    with _session() as session:
+        rows = session.scalars(
+            select(Match)
+            .where(Match.user_id == current_user.id)
+            .join(Match.job)
+            .order_by(Match.score.desc())
+        ).all()
+        return jsonify(
+            [
+                {
+                    "score": match.score,
+                    "reasons": match.reasons,
+                    "matched_at": match.matched_at.isoformat(),
+                    "job": {
+                        "title": match.job.title,
+                        "company": match.job.company,
+                        "location": match.job.location,
+                        "link": match.job.link,
+                        "salary_raw": match.job.salary_raw,
+                        "skills": match.job.skills,
+                    },
+                }
+                for match in rows
+            ]
+        )
