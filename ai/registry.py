@@ -8,7 +8,7 @@ from collections.abc import Callable
 from ai.providers.gemini import GeminiQAEngine, gemini_generate
 from core.interfaces import QAEngine
 
-DEFAULT_GEMINI_MODEL = "gemini-1.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
 
 
 def _require_env(name: str) -> str:

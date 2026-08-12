@@ -150,5 +150,9 @@ def qa():
         jobs = tuple(_job_posting(job) for job in session.scalars(select(Job)).all())
 
     context = QueryContext(user=domain_user, jobs=jobs)
-    answer = _qa_engine().answer(question, context)
+    try:
+        answer = _qa_engine().answer(question, context)
+    except Exception:
+        current_app.logger.exception("QA engine failed to answer question")
+        return jsonify(error="unable to answer question right now"), 502
     return jsonify(text=answer.text, sources=list(answer.sources))
