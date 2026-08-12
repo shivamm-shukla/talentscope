@@ -43,7 +43,7 @@ TalentScope addresses each of these explicitly. The product value is for student
 - A real codebase demonstrating SDET fundamentals end-to-end: unit, integration, API contract, and Playwright E2E tests
 - A CI pipeline that gates merges on tests passing
 - Structured JSON logging suitable for log-analysis tooling
-- A deployable Flask app with MySQL persistence and Alembic migrations
+- A deployable Flask app with Postgres persistence and Alembic migrations
 
 ---
 
@@ -64,7 +64,7 @@ TalentScope addresses each of these explicitly. The product value is for student
         └───────┬───────┘                        │
                 ▼                                │
         ┌───────────────┐      ┌─────────────────▼──┐
-        │     MySQL     │◄─────┤   Flask Web App     │
+        │    Postgres   │◄─────┤   Flask Web App     │
         │ (jobs, users, │      │ (auth, dashboard,   │
         │  preferences) │      │  REST API, Q&A)     │
         └───────┬───────┘      └──────────┬─────────┘
@@ -86,8 +86,8 @@ A more detailed walkthrough of design decisions lives in [`ARCHITECTURE.md`](./A
 |---|---|---|
 | Language | Python 3.11 | Familiarity + ecosystem |
 | Web | Flask | Lightweight, well-tested, matches scope |
-| ORM | SQLAlchemy + Alembic | Same code runs against MySQL (prod) and SQLite (tests) |
-| DB | MySQL 8 / SQLite (test) | Production-realistic; tests stay fast |
+| ORM | SQLAlchemy + Alembic | Same code runs against Postgres (prod) and SQLite (tests) |
+| DB | Postgres (Neon, free) / SQLite (test) | Free-forever managed Postgres; tests stay fast |
 | Scraping | Playwright + pytest-playwright | Handles dynamic Internshala pages |
 | Scheduling | APScheduler | In-process, no separate worker needed for v1 |
 | Auth | Flask-Login + bcrypt | Standard, well-understood |
@@ -97,7 +97,7 @@ A more detailed walkthrough of design decisions lives in [`ARCHITECTURE.md`](./A
 | Testing | pytest, pytest-cov, pytest-flask, factory_boy, jsonschema | Industry-standard test stack |
 | CI | GitHub Actions | Free for public repos, runs on every push |
 | Logging | structlog (JSON) | Queryable logs — relevant to SDET log-analysis skills |
-| Deployment | Render | Free tier, MySQL add-on available |
+| Deployment | Render (web) + Neon (DB) + GitHub Actions (cron pipeline) | Free-forever stack for solo/cohort use |
 
 ---
 
