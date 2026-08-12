@@ -1,18 +1,46 @@
-"""JSON routes for authentication and preference management."""
+"""JSON routes for authentication, preference management, and Q&A."""
 
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ai.registry import create_qa_engine
 from auth.passwords import hash_password, verify_password
-from db.models import User, UserPreference
+from core.interfaces import QAEngine
+from core.models import JobPosting, QueryContext
+from core.models import User as DomainUser
+from db.models import Job, User, UserPreference
 
 api = Blueprint("api", __name__)
 
 
 def _session() -> Session:
     return current_app.extensions["talentscope_session_factory"]()
+
+
+def _qa_engine() -> QAEngine:
+    override = current_app.config.get("QA_ENGINE")
+    if override is not None:
+        return override
+    if "talentscope_qa_engine" not in current_app.extensions:
+        current_app.extensions["talentscope_qa_engine"] = create_qa_engine()
+    return current_app.extensions["talentscope_qa_engine"]
+
+
+def _job_posting(job: Job) -> JobPosting:
+    return JobPosting(
+        source=job.source,
+        title=job.title,
+        company=job.company,
+        location=job.location,
+        link=job.link,
+        posted_at=job.posted_at,
+        scraped_at=job.scraped_at,
+        salary_raw=job.salary_raw,
+        salary_numeric=job.salary_numeric,
+        skills=tuple(job.skills),
+    )
 
 
 def _preference_payload(preferences: UserPreference | None) -> dict[str, object]:
@@ -105,3 +133,26 @@ def preferences():
             preference.minimum_stipend = value
         session.commit()
         return jsonify(_preference_payload(preference))
+
+
+@api.post("/qa")
+@login_required
+def qa():
+    payload = request.get_json(silent=True) or {}
+    question = payload.get("question")
+    if not isinstance(question, str) or not question.strip():
+        return jsonify(error="question is required"), 400
+
+    with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
+        domain_user = DomainUser(id=user.id, email=user.email, name=user.name)
+        jobs = tuple(_job_posting(job) for job in session.scalars(select(Job)).all())
+
+    context = QueryContext(user=domain_user, jobs=jobs)
+    try:
+        answer = _qa_engine().answer(question, context)
+    except Exception:
+        current_app.logger.exception("QA engine failed to answer question")
+        return jsonify(error="unable to answer question right now"), 502
+    return jsonify(text=answer.text, sources=list(answer.sources))

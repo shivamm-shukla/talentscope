@@ -1,6 +1,7 @@
 .brg/*
 .coverage
 .venv/
+.env
 *.egg-info/
 __pycache__/
 talentscope.db

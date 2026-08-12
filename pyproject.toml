@@ -15,6 +15,7 @@ dependencies = [
     "bcrypt>=4.0,<6.0",
     "Flask>=3.0,<4.0",
     "Flask-Login>=0.6,<1.0",
+    "google-generativeai>=0.5,<1.0",
     "SQLAlchemy>=2.0,<3.0",
 ]
 
@@ -30,6 +31,8 @@ dev = [
 
 [tool.setuptools]
 packages = [
+    "ai",
+    "ai.providers",
     "analysis",
     "auth",
     "core",
@@ -42,8 +45,9 @@ packages = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=core --cov=db --cov-report=term-missing --cov-fail-under=70"
+addopts = "--cov=core --cov=db --cov-report=term-missing --cov-fail-under=70 -m \"not live\""
 testpaths = ["tests"]
+markers = ["live: hits the real Gemini API; excluded from the default run"]
 
 [tool.coverage.run]
 branch = true

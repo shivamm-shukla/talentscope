@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -11,12 +12,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from core.interfaces import Notifier
+from core.logging import configure_json_logging
 from core.models import JobPosting, MatchedJob, UserPreferences
 from core.models import User as DomainUser
 from db.models import Match, User
 from db.notifications import record_notification, unsent_matches
 from db.session import create_engine_and_session
 from notifications.registry import create_notifier
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +92,7 @@ def run(session: Session, notifier_factory: Callable[[str], Notifier]) -> Notify
 
 
 def main() -> None:
+    configure_json_logging()
     parser = argparse.ArgumentParser(
         description="Notify users of their unsent job matches."
     )
@@ -99,7 +104,9 @@ def main() -> None:
     try:
         with session_factory() as session:
             result = run(session, create_notifier)
-        print(f"Sent {result.sent}; failed {result.failed}.")
+        logger.info(
+            "notify completed", extra={"sent": result.sent, "failed": result.failed}
+        )
     finally:
         engine.dispose()
 

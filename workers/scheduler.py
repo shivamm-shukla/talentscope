@@ -16,6 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 
 from core.interfaces import JobSource, Notifier
+from core.logging import configure_json_logging
 from db.session import create_engine_and_session
 from notifications.registry import create_notifier
 from sources.registry import create_source
@@ -62,7 +63,7 @@ def run_pipeline(
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    configure_json_logging()
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         raise SystemExit("DATABASE_URL must be set")
