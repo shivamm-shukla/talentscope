@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: talentscope
+    runtime: python
+    plan: free
+    buildCommand: "pip install ."
+    startCommand: "alembic upgrade head && gunicorn wsgi:app"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false

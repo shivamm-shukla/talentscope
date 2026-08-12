@@ -15,7 +15,7 @@ SOURCE_FACTORIES: dict[str, Callable[[], JobSource]] = {
 def create_source(name: str) -> JobSource:
     """Create a configured source by its stable configuration name."""
     try:
-        return SOURCE_FACTORIES[name]
+        return SOURCE_FACTORIES[name]()
     except KeyError as error:
         supported = ", ".join(sorted(SOURCE_FACTORIES))
         raise ValueError(
