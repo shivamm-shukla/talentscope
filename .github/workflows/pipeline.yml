@@ -16,6 +16,8 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install .
+      - name: Install Playwright browser
+        run: playwright install --with-deps chromium
       - name: Run scrape -> analyze -> match -> notify
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
