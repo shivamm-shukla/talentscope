@@ -134,7 +134,7 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [ ] Email notifier — in progress
 - [ ] Telegram notifier — in progress
 - [ ] Gemini Q&A endpoint
-- [x] pytest suite: unit, integration, API (E2E still pending)
+- [x] pytest suite: unit, integration, API, E2E
 - [x] ≥70% coverage (99% on covered modules as of the auth skeleton)
 - [ ] Structured JSON logging
 - [ ] Render deployment
