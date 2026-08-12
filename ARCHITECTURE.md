@@ -260,12 +260,13 @@ sequence lands — see [BACKLOG.md](./BACKLOG.md).
 
 ## Open questions
 
-- **Scheduler process topology:** should APScheduler run inside the Flask web process,
-  or as a small separate process started alongside it? In-process is simpler to deploy
-  but ties scheduler uptime to web uptime (and vice versa — a stuck scrape could affect
-  web responsiveness if not run in a background thread carefully). Leaning separate
-  process for isolation, but this is a judgment call to confirm before PR #8.
-
 ## Resolved implementation decisions
 
 - **Internshala scraping: Playwright.** Its locator auto-waiting and browser context isolation make dynamic-page scraping and the eventual E2E suite more deterministic in CI. Use Chromium initially; install its browser binary explicitly in CI. `requests`+`BeautifulSoup` is not the primary adapter for this JS-rendered source.
+- **Scheduler process topology: separate process.** `workers/scheduler.py` runs
+  APScheduler's `BlockingScheduler` as its own standalone entrypoint (`PIPELINE_CRON`,
+  `PIPELINE_SOURCES`, `DATABASE_URL` env vars), not inside the Flask app. Isolates a
+  stuck scrape/notify run from web uptime and vice versa, at the cost of one more
+  process to deploy/monitor on Render. It runs each pipeline stage (scrape → analyze →
+  match → notify) in its own transaction and its own try/except, so one stage's failure
+  doesn't block the rest — matching the per-stage isolation this doc already commits to.
