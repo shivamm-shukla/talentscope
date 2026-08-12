@@ -48,6 +48,7 @@ class User:
     email: str
     name: str = ""
     preferences: UserPreferences = field(default_factory=UserPreferences)
+    telegram_chat_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
