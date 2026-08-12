@@ -65,5 +65,5 @@ rebuild:
 
 Carried from ARCHITECTURE.md's open questions so they don't get lost:
 
-- Scheduler process topology — in-process APScheduler inside the Flask app vs. a small
-  separate scheduler process. Needs a decision before build sequence step 8.
+- Scheduler process topology — resolved: separate process
+  (`workers/scheduler.py`). See ARCHITECTURE.md's resolved implementation decisions.

@@ -230,29 +230,35 @@ deployed processes, or move `ai/` behind its own service, without the change tou
 Ordered so each PR is independently mergeable, keeps CI green, and never leaves the repo
 in a state where a previous PR's tests are broken by a later one.
 
-1. **Repo scaffold + CI skeleton** — `core/` package with empty interface definitions,
-   `db/` with SQLAlchemy setup (no tables yet), pytest config, GitHub Actions workflow
-   that runs `pytest` + `ruff` + `black --check` on an empty/near-empty test suite so the
-   gate exists before there's much to gate.
-2. **Data model** — `db/models.py` (jobs, users, user_preferences, matches,
+1. **Repo scaffold + CI skeleton** ✅ — `core/` package with empty interface
+   definitions, `db/` with SQLAlchemy setup (no tables yet), pytest config, GitHub
+   Actions workflow that runs `pytest` + `ruff` + `black --check` on an empty/near-empty
+   test suite so the gate exists before there's much to gate.
+2. **Data model** ✅ — `db/models.py` (jobs, users, user_preferences, matches,
    notifications_sent, action_log) + first Alembic migration. Unit tests for model
    constraints (dedup key, cascades).
-3. **`sources/` — Internshala + Remotive adapters** implementing `JobSource`, plus
+3. **`sources/` — Internshala + Remotive adapters** ✅ implementing `JobSource`, plus
    `tests/fixtures/` of saved HTML/JSON and integration tests against them (no live
    network in CI). `workers/run_scrape.py` entrypoint.
-4. **`analysis/`** — skill extractor, salary normalizer, trend computation as pure
-   functions with unit tests. `workers/run_analyze.py` entrypoint.
-5. **`matching/`** — matcher + unit tests. `workers/run_match.py` entrypoint.
-6. **`auth/` + `web/` skeleton** — Flask-Login, signup/login, user preferences CRUD, API
-   tests for each endpoint.
-7. **`notifications/`** — email + Telegram notifiers implementing `Notifier`, with a fake
-   notifier used in tests (no real sends in CI). `workers/run_notify.py` entrypoint.
-8. **APScheduler wiring** — schedule stages 3/4/5/7 in sequence; this is the first PR
-   where the full pipeline runs end-to-end.
-9. **`ai/` — Gemini `QAEngine`** — single-query Q&A endpoint, API tests with a fake
-   `QAEngine` for deterministic tests plus one gated live-Gemini smoke test.
+4. **`analysis/`** ✅ — skill extractor, salary normalizer, trend computation as pure
+   functions with unit tests. `workers/run_analyze.py` entrypoint normalizes stored
+   jobs' stipends and backfills skills from title text when a source provides none.
+5. **`matching/`** ✅ — matcher + unit tests. `workers/run_match.py` entrypoint.
+6. **`auth/` + `web/` skeleton** ✅ — Flask-Login, signup/login, user preferences CRUD,
+   API tests for each endpoint.
+7. **`notifications/`** ✅ — email (stdlib `smtplib`) + Telegram (stdlib `urllib`
+   against the Bot API) notifiers implementing `Notifier`, with a fake notifier used in
+   tests (no real sends in CI). `workers/run_notify.py` entrypoint.
+8. **APScheduler wiring** ✅ — `workers/scheduler.py` runs stages 3/4/5/7 in sequence as
+   a separate process (see resolved scheduler topology decision below); this is the
+   first PR where the full pipeline runs end-to-end.
+9. **`ai/` — Gemini `QAEngine`** ✅ — `ai/providers/gemini.py` + `ai/registry.py`,
+   single-query `/qa` endpoint, API tests with a fake `QAEngine` for deterministic
+   tests plus one gated live-Gemini smoke test (`tests/integration/test_gemini_live.py`,
+   skipped unless `GEMINI_API_KEY` is set, excluded from the default run via the `live`
+   pytest marker).
 10. **E2E test** — signup → set preferences → see matched jobs, Playwright headless,
-    against the full stack from steps 2-8.
+    against the full stack from steps 2-9.
 11. **Structured logging + deploy to Render** — matches original README's ops goals.
 
 Phase A (agent) and Phase C (approval layer) are separate roadmap items after this
@@ -260,12 +266,13 @@ sequence lands — see [BACKLOG.md](./BACKLOG.md).
 
 ## Open questions
 
-- **Scheduler process topology:** should APScheduler run inside the Flask web process,
-  or as a small separate process started alongside it? In-process is simpler to deploy
-  but ties scheduler uptime to web uptime (and vice versa — a stuck scrape could affect
-  web responsiveness if not run in a background thread carefully). Leaning separate
-  process for isolation, but this is a judgment call to confirm before PR #8.
-
 ## Resolved implementation decisions
 
 - **Internshala scraping: Playwright.** Its locator auto-waiting and browser context isolation make dynamic-page scraping and the eventual E2E suite more deterministic in CI. Use Chromium initially; install its browser binary explicitly in CI. `requests`+`BeautifulSoup` is not the primary adapter for this JS-rendered source.
+- **Scheduler process topology: separate process.** `workers/scheduler.py` runs
+  APScheduler's `BlockingScheduler` as its own standalone entrypoint (`PIPELINE_CRON`,
+  `PIPELINE_SOURCES`, `DATABASE_URL` env vars), not inside the Flask app. Isolates a
+  stuck scrape/notify run from web uptime and vice versa, at the cost of one more
+  process to deploy/monitor on Render. It runs each pipeline stage (scrape → analyze →
+  match → notify) in its own transaction and its own try/except, so one stage's failure
+  doesn't block the rest — matching the per-stage isolation this doc already commits to.
