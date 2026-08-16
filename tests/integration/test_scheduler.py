@@ -65,18 +65,18 @@ def test_run_pipeline_runs_all_stages_end_to_end() -> None:
     engine.dispose()
 
 
-def test_run_pipeline_continues_past_a_failing_stage(caplog) -> None:
+def test_run_pipeline_isolates_a_failing_source_from_others(caplog) -> None:
     engine, session_factory = _seeded_session_factory()
 
     with caplog.at_level(logging.ERROR):
         run_pipeline(
             session_factory,
-            [FailingSource()],
+            [FakeSource(), FailingSource()],
             notifier_factory=lambda _: FakeNotifier(),
         )
 
-    assert "stage scrape failed" in caplog.text
+    assert "source broken failed to fetch" in caplog.text
     with session_factory() as session:
-        assert session.query(Job).count() == 0
+        assert session.query(Job).count() == 1
 
     engine.dispose()
