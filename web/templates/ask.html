@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Ask — Santa{% endblock %}
+{% block content %}
+<section class="feed-header">
+  <h1>Ask santa anything</h1>
+  <p class="muted">Grounded in the live job database — try "What skills are trending for ML interns right now?"</p>
+</section>
+
+<section class="card auth-card wide">
+  <form id="ask-form" class="form" novalidate>
+    <label>Your question
+      <textarea name="question" rows="3" placeholder="What remote internships need React?" required></textarea>
+    </label>
+    <p class="form-error" id="ask-error" hidden></p>
+    <button type="submit" class="btn btn-primary btn-block" id="ask-submit">Ask</button>
+  </form>
+</section>
+
+<section id="answer-card" class="card auth-card wide answer-card" hidden>
+  <p class="answer-text" id="answer-text"></p>
+  <div id="answer-sources" class="answer-sources"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const form = document.getElementById('ask-form');
+const errorEl = document.getElementById('ask-error');
+const submitBtn = document.getElementById('ask-submit');
+const answerCard = document.getElementById('answer-card');
+const answerText = document.getElementById('answer-text');
+const answerSources = document.getElementById('answer-sources');
+
+const MAX_SOURCES_SHOWN = 5;
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  errorEl.hidden = true;
+  const question = form.question.value.trim();
+  if (!question) return;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Thinking…';
+  answerCard.hidden = true;
+
+  try {
+    const response = await fetch('/qa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    if (response.status === 401) {
+      window.location.href = "{{ url_for('pages.login_page') }}";
+      return;
+    }
+    const data = await response.json();
+    if (!response.ok) {
+      errorEl.textContent = data.error || 'Santa could not answer that just now.';
+      errorEl.hidden = false;
+      return;
+    }
+    answerText.textContent = data.text;
+    const sources = (data.sources || []).slice(0, MAX_SOURCES_SHOWN);
+    answerSources.innerHTML = sources.length
+      ? '<p class="muted">Referenced listings</p>' +
+        sources.map((url) => `<a class="btn btn-secondary btn-sm" href="${url}" target="_blank" rel="noopener">View listing</a>`).join('')
+      : '';
+    answerCard.hidden = false;
+  } catch (error) {
+    errorEl.textContent = 'Something went wrong. Try again in a moment.';
+    errorEl.hidden = false;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Ask';
+  }
+});
+</script>
+{% endblock %}

@@ -81,7 +81,7 @@ The product value is for students; the engineering rigor is for me.
 - **Retention policy** — postings past their estimated application window are never stored or shown
 - **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences, ranked by how closely a job's skill demands fit what the user actually knows
 - **GitHub skill sync** — link a GitHub username and santa periodically scans public repos to keep the skills list current; **LinkedIn import** — upload a LinkedIn data export (self-service, no scraping) to pull in positions, education, and skills the same way. Both feed the same skill vocabulary and are stored for a future resume-builder feature to reuse
-- **Natural-language Q&A** (API today, no dedicated page yet) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
+- **Natural-language Q&A** (`/app/ask`) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
 
 Not yet exposed: a market-trends dashboard (skill/city/stipend trends) — the
 analysis logic exists in `analysis/trends.py` but no route surfaces it yet.
