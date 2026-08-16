@@ -20,7 +20,8 @@ def match_jobs(
         score = 0.0
         job_skills = _normalized(job.skills)
         common_skills = desired_skills & job_skills
-        if desired_skills and common_skills:
+        skills_match = not desired_skills or bool(common_skills)
+        if common_skills:
             score += 0.6 * len(common_skills) / len(desired_skills)
             reasons.append("skills: " + ", ".join(sorted(common_skills)))
 
@@ -45,7 +46,7 @@ def match_jobs(
             ):
                 reasons.append("stipend meets minimum")
 
-        if score > 0 and location_matches and stipend_matches:
+        if score > 0 and skills_match and location_matches and stipend_matches:
             matches.append(
                 MatchedJob(job=job, score=round(score, 3), reasons=tuple(reasons))
             )
