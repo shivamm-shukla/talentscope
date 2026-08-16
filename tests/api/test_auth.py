@@ -1,3 +1,6 @@
+import io
+import zipfile
+
 import pytest
 
 from web import create_app
@@ -68,8 +71,45 @@ def test_login_logout_and_preference_crud(client) -> None:
         "telegram_chat_id": "1333041980",
         "github_username": "octocat",
         "github_profile": None,
+        "linkedin_profile": None,
     }
 
 
 def test_protected_routes_require_login(client) -> None:
     assert client.get("/preferences").status_code == 401
+
+
+def _linkedin_export_zip() -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Skills.csv", "Name\nPython\nSQL\n")
+    return buffer.getvalue()
+
+
+def test_linkedin_import_updates_skills_and_profile_status(client) -> None:
+    signup(client)
+
+    response = client.post(
+        "/preferences/linkedin-import",
+        data={"export": (io.BytesIO(_linkedin_export_zip()), "export.zip")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["skill_count"] == 2
+
+    prefs = client.get("/preferences").get_json()
+    assert prefs["skills"] == ["Python", "SQL"]
+    assert prefs["linkedin_profile"]["skill_count"] == 2
+
+
+def test_linkedin_import_rejects_non_zip_upload(client) -> None:
+    signup(client)
+
+    response = client.post(
+        "/preferences/linkedin-import",
+        data={"export": (io.BytesIO(b"not a zip"), "export.zip")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400

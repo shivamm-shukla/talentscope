@@ -71,6 +71,9 @@ class User(UserMixin, Base):
     github_profile: Mapped[GithubProfile | None] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False
     )
+    linkedin_profile: Mapped[LinkedinProfile | None] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
     matches: Mapped[list[Match]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
@@ -120,6 +123,34 @@ class GithubProfile(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     user: Mapped[User] = relationship(back_populates="github_profile")
+
+
+class LinkedinProfile(Base):
+    """Latest imported snapshot of a user's LinkedIn data export.
+
+    Populated from a user-uploaded export (LinkedIn has no usable public API),
+    kept as a structured snapshot for a later resume feature to reuse.
+    """
+
+    __tablename__ = "linkedin_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    headline: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    positions: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    education: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    certifications: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    inferred_skills: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    user: Mapped[User] = relationship(back_populates="linkedin_profile")
 
 
 class Match(Base):

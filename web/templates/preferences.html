@@ -30,6 +30,14 @@
     <p class="form-success" id="form-success" hidden>Saved.</p>
     <button type="submit" class="btn btn-primary btn-block">Save preferences</button>
   </form>
+  <form id="linkedin-form" class="form" novalidate>
+    <label>Import LinkedIn data <span class="field-hint">optional — download your export from LinkedIn's Settings &amp; Privacy → "Get a copy of your data", then upload the .zip here</span>
+      <input type="file" name="export" accept=".zip">
+    </label>
+    <p class="muted" id="linkedin-status"></p>
+    <p class="form-error" id="linkedin-error" hidden></p>
+    <button type="submit" class="btn btn-secondary btn-block">Import</button>
+  </form>
   <p class="muted"><a href="{{ url_for('pages.feed') }}">Back to your feed</a></p>
 </section>
 {% endblock %}
@@ -39,6 +47,9 @@ const form = document.getElementById('prefs-form');
 const errorEl = document.getElementById('form-error');
 const successEl = document.getElementById('form-success');
 const githubStatusEl = document.getElementById('github-status');
+const linkedinForm = document.getElementById('linkedin-form');
+const linkedinStatusEl = document.getElementById('linkedin-status');
+const linkedinErrorEl = document.getElementById('linkedin-error');
 
 function splitList(value) {
   return value.split(',').map((s) => s.trim()).filter(Boolean);
@@ -68,6 +79,12 @@ async function loadPreferences() {
   } else {
     githubStatusEl.textContent = 'Not synced yet — santa checks periodically, this can take a couple hours.';
   }
+  if (prefs.linkedin_profile) {
+    const synced = new Date(prefs.linkedin_profile.synced_at).toLocaleString();
+    linkedinStatusEl.textContent = `Imported ${prefs.linkedin_profile.position_count} positions, ${prefs.linkedin_profile.skill_count} skills — last updated ${synced}.`;
+  } else {
+    linkedinStatusEl.textContent = 'Not imported yet.';
+  }
 }
 
 form.addEventListener('submit', async (event) => {
@@ -95,6 +112,31 @@ form.addEventListener('submit', async (event) => {
   const data = await response.json().catch(() => ({}));
   errorEl.textContent = data.error || 'Could not save preferences.';
   errorEl.hidden = false;
+});
+
+linkedinForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  linkedinErrorEl.hidden = true;
+  const file = linkedinForm.export.files[0];
+  if (!file) {
+    linkedinErrorEl.textContent = 'Choose a .zip file first.';
+    linkedinErrorEl.hidden = false;
+    return;
+  }
+  const formData = new FormData();
+  formData.append('export', file);
+  const response = await fetch('/preferences/linkedin-import', {
+    method: 'POST',
+    body: formData,
+  });
+  if (response.ok) {
+    linkedinForm.reset();
+    await loadPreferences();
+    return;
+  }
+  const data = await response.json().catch(() => ({}));
+  linkedinErrorEl.textContent = data.error || 'Could not import that file.';
+  linkedinErrorEl.hidden = false;
 });
 
 loadPreferences();

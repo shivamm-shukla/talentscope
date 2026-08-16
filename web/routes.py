@@ -6,11 +6,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ai.registry import create_qa_engine
+from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
+from analysis.skill_merge import merge_skills
 from auth.passwords import hash_password, verify_password
 from core.interfaces import QAEngine
 from core.models import JobPosting, QueryContext
 from core.models import User as DomainUser
-from db.models import GithubProfile, Job, Match, User, UserPreference
+from db.linkedin_profiles import upsert_linkedin_profile
+from db.models import GithubProfile, Job, LinkedinProfile, Match, User, UserPreference
+from integrations.linkedin.parser import (
+    LinkedinExportInvalid,
+    LinkedinExportTooLarge,
+    parse_export,
+)
 
 api = Blueprint("api", __name__)
 
@@ -59,11 +67,23 @@ def _github_payload(profile: GithubProfile | None) -> dict[str, object] | None:
     }
 
 
+def _linkedin_payload(profile: LinkedinProfile | None) -> dict[str, object] | None:
+    if profile is None:
+        return None
+    return {
+        "headline": profile.headline,
+        "position_count": len(profile.positions),
+        "skill_count": len(profile.inferred_skills),
+        "synced_at": profile.synced_at.isoformat(),
+    }
+
+
 def _preference_payload(
     preferences: UserPreference | None,
     telegram_chat_id: str | None,
     github_username: str | None,
     github_profile: GithubProfile | None,
+    linkedin_profile: LinkedinProfile | None,
 ) -> dict[str, object]:
     base = {
         "skills": [],
@@ -73,6 +93,7 @@ def _preference_payload(
         "telegram_chat_id": telegram_chat_id,
         "github_username": github_username,
         "github_profile": _github_payload(github_profile),
+        "linkedin_profile": _linkedin_payload(linkedin_profile),
     }
     if preferences is None:
         return base
@@ -144,6 +165,7 @@ def preferences():
                     user.telegram_chat_id,
                     user.github_username,
                     user.github_profile,
+                    user.linkedin_profile,
                 )
             )
         payload = request.get_json(silent=True) or {}
@@ -186,8 +208,36 @@ def preferences():
                 user.telegram_chat_id,
                 user.github_username,
                 user.github_profile,
+                user.linkedin_profile,
             )
         )
+
+
+@api.post("/preferences/linkedin-import")
+@login_required
+def linkedin_import():
+    upload = request.files.get("export")
+    if upload is None or not upload.filename:
+        return jsonify(error="no file uploaded"), 400
+
+    try:
+        export = parse_export(upload.read())
+    except LinkedinExportInvalid as error:
+        return jsonify(error=str(error)), 400
+    except LinkedinExportTooLarge as error:
+        return jsonify(error=str(error)), 400
+
+    inferred = infer_linkedin_skills(export)
+    with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
+        preference = user.preferences or UserPreference()
+        if user.preferences is None:
+            user.preferences = preference
+        preference.skills = merge_skills(preference.skills or [], inferred)
+        profile = upsert_linkedin_profile(session, user, export, inferred)
+        session.commit()
+        return jsonify(_linkedin_payload(profile))
 
 
 @api.get("/matches")

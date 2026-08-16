@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from analysis.github_skills import infer_skills, repo_languages
+from analysis.skill_merge import merge_skills
 from core.logging import configure_json_logging
 from core.models import GithubRepo
 from db.github_profiles import upsert_github_profile
@@ -29,18 +30,6 @@ class GithubSyncResult:
     users_synced: int
     skills_added: int
     failed: int
-
-
-def _merge_skills(existing: list[str], inferred: list[str]) -> list[str]:
-    """Union *inferred* into *existing*, case-insensitively, keeping the
-    existing entries' casing and only appending genuinely new skills."""
-    seen = {skill.casefold() for skill in existing}
-    merged = list(existing)
-    for skill in inferred:
-        if skill.casefold() not in seen:
-            merged.append(skill)
-            seen.add(skill.casefold())
-    return merged
 
 
 def run(
@@ -78,7 +67,7 @@ def run(
             user.preferences = preference
         existing_skills = preference.skills or []
         before = len(existing_skills)
-        preference.skills = _merge_skills(existing_skills, inferred)
+        preference.skills = merge_skills(existing_skills, inferred)
         skills_added += len(preference.skills) - before
 
         upsert_github_profile(

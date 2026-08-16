@@ -28,6 +28,9 @@ talentscope/
                   # imports. Everything else depends on core/; core/ depends on nothing
                   # in this tree.
   sources/        # JobSource implementations — one file per external source.
+  integrations/   # External identity/profile providers (GitHub API client,
+                  # LinkedIn export parser) — fetch/parse only, same shape as
+                  # sources/ but for enriching a user's profile, not job postings.
   analysis/       # Pure functions: skill extraction, trend computation, salary
                   # normalization. Given the same input, always the same output. No
                   # Flask, no DB session, no network call lives here.

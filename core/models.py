@@ -68,6 +68,22 @@ class GithubRepo:
 
 
 @dataclass(frozen=True, slots=True)
+class LinkedinPosition:
+    title: str
+    company: str = ""
+    description: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class LinkedinExport:
+    headline: str = ""
+    positions: tuple[LinkedinPosition, ...] = ()
+    education: tuple[str, ...] = ()
+    certifications: tuple[str, ...] = ()
+    skills: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class MatchedJob:
     job: JobPosting
     score: float
