@@ -41,7 +41,7 @@ def test_matcher_excludes_jobs_outside_required_location_or_stipend() -> None:
     )
 
 
-def test_matcher_excludes_jobs_with_no_skill_overlap_when_skills_are_the_only_preference() -> (
+def test_matcher_excludes_jobs_with_no_skill_overlap_from_skills_only_preference() -> (
     None
 ):
     preferences = UserPreferences(skills=("python",))
