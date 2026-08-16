@@ -1,9 +1,9 @@
 # Testing strategy
 
-The test suite is the centerpiece of this project (see [README.md](./README.md#why-this-project-exists)
-for why). This document defines the four test layers, what belongs in each, how the
-module boundaries in [ARCHITECTURE.md](./ARCHITECTURE.md) make each layer possible to
-test in isolation, and the CI gate.
+The test suite is the centerpiece of this project — see the [engineering principles](./README.md#engineering-principles)
+in the README for why. This covers the four test layers, what belongs in each, how the
+module boundaries in [ARCHITECTURE.md](./ARCHITECTURE.md) make each layer testable in
+isolation, and the CI gate.
 
 ## The four layers
 

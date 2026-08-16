@@ -5,9 +5,9 @@ cuts. Each item notes *why* it's deferred and what would trigger picking it up.
 
 ## Phase C — action-taking agents (design-only for now)
 
-The biggest deferred item. Explicitly: **do not build any part of this until Phase A is
-done and this section has been expanded into a real design**, per the project's phased
-roadmap in [ARCHITECTURE.md](./ARCHITECTURE.md#phase-c--action-taking-agents-design-now-do-not-build).
+The biggest deferred item. I'm not touching this until Phase A is done and I've actually
+sat down and designed it properly — see the phased roadmap in
+[ARCHITECTURE.md](./ARCHITECTURE.md#phase-c--action-taking-agents-not-building-this-yet).
 
 What it eventually covers:
 - Auto-apply to a matched internship on the user's behalf.
