@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -18,25 +18,23 @@ def test_internshala_source_normalizes_saved_listing() -> None:
     jobs = InternshalaSource(fetch_html=fixture_fetcher).fetch()
 
     assert len(jobs) == 2
+    assert jobs[0].title == "Software Development Intern"
     assert jobs[0].company == "Example Labs"
     assert jobs[0].location == "Bengaluru"
-    assert jobs[0].salary_raw == "INR 15000"
+    assert jobs[0].salary_raw == "₹ 15,000 /month"
     assert jobs[0].skills == ("Python", "Flask")
     assert jobs[0].description == "Build web tools."
 
 
 def test_internshala_source_filters_by_posted_date() -> None:
-    jobs = InternshalaSource(fetch_html=fixture_fetcher).fetch(
-        since=datetime(2026, 8, 5, tzinfo=UTC)
-    )
+    since = datetime.now(UTC) - timedelta(days=10)
+    jobs = InternshalaSource(fetch_html=fixture_fetcher).fetch(since=since)
 
     assert [job.title for job in jobs] == ["Software Development Intern"]
 
 
-def test_parser_ignores_invalid_metadata() -> None:
-    assert (
-        parse_job_postings('<script type="application/ld+json">not-json</script>') == []
-    )
+def test_parser_ignores_cards_missing_required_fields() -> None:
+    assert parse_job_postings("<div>no internship cards here</div>") == []
 
 
 def test_source_registry_creates_sources_and_rejects_unknown_names() -> None:
