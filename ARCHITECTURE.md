@@ -1,10 +1,9 @@
 # Architecture
 
-This document is the source of truth for Santa's module boundaries, interfaces, and
-build sequence. It is written to be followed by anyone (or any tool) implementing the
-system, not just as a description of an existing codebase — as of this writing, no
-application code exists yet. See [BACKLOG.md](./BACKLOG.md) for what's deliberately
-deferred and [TESTING.md](./TESTING.md) for how each piece gets verified.
+Notes on Santa's module boundaries, interfaces, and the order I built things in — mostly
+so I don't have to re-derive a decision six months from now when I've forgotten why I
+made it. See [BACKLOG.md](./BACKLOG.md) for what I've deliberately deferred and
+[TESTING.md](./TESTING.md) for how each piece gets verified.
 
 ## Design goals, in priority order
 
@@ -161,7 +160,7 @@ Because the workers are already separate, independently-invokable units by the e
 Phase B, that migration is a **change to what triggers them** (a queue consumer instead
 of APScheduler calling them in sequence), not a rewrite of what they do.
 
-## Phase A — planning Q&A agent (design now, build after Phase B)
+## Phase A — planning Q&A agent (next up)
 
 Today's Q&A ("ask Gemini a fixed question against the live DB") becomes an agent that
 decides its own steps: pulling multiple data slices, comparing time periods, checking
@@ -192,11 +191,11 @@ This is why Phase B insists on business logic living in `analysis/`/`matching/` 
 than inline in routes: it's the same logic Phase A needs to expose as tools, and
 duplicating it there would mean two implementations to keep in sync.
 
-## Phase C — action-taking agents (design now, do NOT build)
+## Phase C — action-taking agents (not building this yet)
 
 Auto-apply, auto-message-a-recruiter, and similar actions need a trust/safety/approval
-layer that does not exist yet and is explicitly out of scope to build now. What Phase B
-must not foreclose:
+layer that doesn't exist yet, and I'm not building it until Phase A has earned some
+trust. What Phase B needs to leave open for later:
 
 - **All outbound, real-world-visible actions already go through a narrow interface.**
   Notifications already go through `Notifier.send()`, not scattered `smtp.send()`/bot-API
@@ -278,4 +277,4 @@ sequence lands — see [BACKLOG.md](./BACKLOG.md).
   stuck scrape/notify run from web uptime and vice versa, at the cost of one more
   process to deploy/monitor on Render. It runs each pipeline stage (scrape → analyze →
   match → notify) in its own transaction and its own try/except, so one stage's failure
-  doesn't block the rest — matching the per-stage isolation this doc already commits to.
+  doesn't block the rest — same per-stage isolation as everywhere else in this pipeline.
