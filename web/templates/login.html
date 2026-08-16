@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Log in — Santa{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <h1>Welcome back</h1>
+  <form id="login-form" class="form" novalidate>
+    <label>Email
+      <input type="email" name="email" required autocomplete="email">
+    </label>
+    <label>Password
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+    <p class="form-error" id="form-error" hidden></p>
+    <button type="submit" class="btn btn-primary btn-block">Log in</button>
+  </form>
+  <p class="muted">New here? <a href="{{ url_for('pages.signup_page') }}">Create an account</a></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('login-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const errorEl = document.getElementById('form-error');
+  errorEl.hidden = true;
+  const body = {
+    email: form.email.value,
+    password: form.password.value,
+  };
+  const response = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (response.ok) {
+    window.location.href = "{{ url_for('pages.feed') }}";
+    return;
+  }
+  const data = await response.json().catch(() => ({}));
+  errorEl.textContent = data.error || 'Invalid email or password.';
+  errorEl.hidden = false;
+});
+</script>
+{% endblock %}

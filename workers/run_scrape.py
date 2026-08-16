@@ -7,13 +7,14 @@ import logging
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from analysis.classify import classify
 from core.interfaces import JobSource
 from core.logging import configure_json_logging
-from db.jobs import upsert_job
+from db.jobs import prune_expired_jobs, upsert_job
 from db.session import create_engine_and_session
 from sources.registry import create_source
 
@@ -25,13 +26,26 @@ class ScrapeResult:
     fetched: int
     created: int
     updated: int
+    skipped_non_cs: int = 0
+    skipped_expired: int = 0
+    pruned: int = 0
 
 
 def run(
-    sources: Iterable[JobSource], session: Session, since: datetime | None = None
+    sources: Iterable[JobSource],
+    session: Session,
+    since: datetime | None = None,
+    now: datetime | None = None,
 ) -> ScrapeResult:
-    """Fetch sources and commit normalized postings in one transaction."""
-    fetched = created = 0
+    """Fetch sources and commit normalized postings in one transaction.
+
+    Postings outside the product's scope are dropped rather than stored:
+    non-CS/BCA-relevant postings (`skipped_non_cs`), and postings whose
+    estimated application window has already lapsed (`skipped_expired`).
+    Previously-stored postings that have since expired are also pruned.
+    """
+    now = now or datetime.now(timezone.utc)
+    fetched = created = skipped_non_cs = skipped_expired = 0
     for source in sources:
         try:
             postings = source.fetch(since=since)
@@ -40,10 +54,26 @@ def run(
             continue
         for posting in postings:
             fetched += 1
-            _, was_created = upsert_job(session, posting)
+            classification = classify(posting, now=now)
+            if not classification.is_cs_related:
+                skipped_non_cs += 1
+                continue
+            if classification.expires_at < now:
+                skipped_expired += 1
+                continue
+            _, was_created = upsert_job(session, posting, classification)
             created += was_created
+    processed = fetched - skipped_non_cs - skipped_expired
+    pruned = prune_expired_jobs(session, now=now)
     session.commit()
-    return ScrapeResult(fetched=fetched, created=created, updated=fetched - created)
+    return ScrapeResult(
+        fetched=fetched,
+        created=created,
+        updated=processed - created,
+        skipped_non_cs=skipped_non_cs,
+        skipped_expired=skipped_expired,
+        pruned=pruned,
+    )
 
 
 def main() -> None:
@@ -75,6 +105,9 @@ def main() -> None:
                 "fetched": result.fetched,
                 "created": result.created,
                 "updated": result.updated,
+                "skipped_non_cs": result.skipped_non_cs,
+                "skipped_expired": result.skipped_expired,
+                "pruned": result.pruned,
             },
         )
     finally:

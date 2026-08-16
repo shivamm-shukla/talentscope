@@ -1,4 +1,4 @@
-"""Pure, deterministic TalentScope analysis functions."""
+"""Pure, deterministic Santa analysis functions."""
 
 from analysis.salary import normalize_monthly_stipend
 from analysis.skill_extractor import extract_skills

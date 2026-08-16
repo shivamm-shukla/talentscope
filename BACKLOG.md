@@ -12,7 +12,7 @@ roadmap in [ARCHITECTURE.md](./ARCHITECTURE.md#phase-c--action-taking-agents-des
 What it eventually covers:
 - Auto-apply to a matched internship on the user's behalf.
 - Auto-message a recruiter (e.g. a templated follow-up after applying).
-- Any other action that changes real-world state outside TalentScope's own database.
+- Any other action that changes real-world state outside Santa's own database.
 
 Why it's deferred: this requires a trust/safety/approval design that doesn't exist yet —
 at minimum: explicit per-action user consent (not a blanket "yes, act for me" toggle),

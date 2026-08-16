@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Preferences — Santa{% endblock %}
+{% block content %}
+<section class="card auth-card wide">
+  <h1>Tell santa what to look for</h1>
+  <p class="muted">This drives your feed and your alerts. Update anytime.</p>
+  <form id="prefs-form" class="form" novalidate>
+    <label>Skills <span class="field-hint">comma separated, e.g. python, react, sql</span>
+      <input type="text" name="skills" placeholder="python, react, sql">
+    </label>
+    <label>Locations <span class="field-hint">comma separated, e.g. remote, bangalore</span>
+      <input type="text" name="locations" placeholder="remote, bangalore">
+    </label>
+    <label>Minimum stipend <span class="field-hint">monthly, in rupees — leave blank for no minimum</span>
+      <input type="number" name="minimum_stipend" min="0">
+    </label>
+    <fieldset class="channels">
+      <legend>Alert channels</legend>
+      <label class="checkbox"><input type="checkbox" name="channels" value="email"> Email</label>
+      <label class="checkbox"><input type="checkbox" name="channels" value="telegram"> Telegram</label>
+    </fieldset>
+    <label>Telegram chat ID <span class="field-hint">optional, message @internai_alerts_bot to get yours</span>
+      <input type="text" name="telegram_chat_id">
+    </label>
+    <p class="form-error" id="form-error" hidden></p>
+    <p class="form-success" id="form-success" hidden>Saved.</p>
+    <button type="submit" class="btn btn-primary btn-block">Save preferences</button>
+  </form>
+  <p class="muted"><a href="{{ url_for('pages.feed') }}">Back to your feed</a></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const form = document.getElementById('prefs-form');
+const errorEl = document.getElementById('form-error');
+const successEl = document.getElementById('form-success');
+
+function splitList(value) {
+  return value.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+async function loadPreferences() {
+  const response = await fetch('/preferences', { headers: { Accept: 'application/json' } });
+  if (response.status === 401) {
+    window.location.href = "{{ url_for('pages.login_page') }}";
+    return;
+  }
+  const prefs = await response.json();
+  form.skills.value = (prefs.skills || []).join(', ');
+  form.locations.value = (prefs.locations || []).join(', ');
+  form.minimum_stipend.value = prefs.minimum_stipend ?? '';
+  form.telegram_chat_id.value = prefs.telegram_chat_id || '';
+  (prefs.channels || []).forEach((channel) => {
+    const box = form.querySelector(`input[name="channels"][value="${channel}"]`);
+    if (box) box.checked = true;
+  });
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  errorEl.hidden = true;
+  successEl.hidden = true;
+  const channels = Array.from(form.querySelectorAll('input[name="channels"]:checked')).map((el) => el.value);
+  const body = {
+    skills: splitList(form.skills.value),
+    locations: splitList(form.locations.value),
+    minimum_stipend: form.minimum_stipend.value ? Number(form.minimum_stipend.value) : null,
+    channels,
+    telegram_chat_id: form.telegram_chat_id.value.trim() || null,
+  };
+  const response = await fetch('/preferences', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (response.ok) {
+    successEl.hidden = false;
+    return;
+  }
+  const data = await response.json().catch(() => ({}));
+  errorEl.textContent = data.error || 'Could not save preferences.';
+  errorEl.hidden = false;
+});
+
+loadPreferences();
+</script>
+{% endblock %}

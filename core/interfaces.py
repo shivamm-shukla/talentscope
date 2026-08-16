@@ -1,4 +1,4 @@
-"""Structural contracts between TalentScope modules."""
+"""Structural contracts between Santa modules."""
 
 from __future__ import annotations
 
