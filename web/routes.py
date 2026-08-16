@@ -275,6 +275,9 @@ def matches():
         )
 
 
+QA_CONTEXT_JOB_LIMIT = 50
+
+
 @api.post("/qa")
 @login_required
 def qa():
@@ -287,7 +290,10 @@ def qa():
         user = session.get(User, current_user.id)
         assert user is not None
         domain_user = DomainUser(id=user.id, email=user.email, name=user.name)
-        jobs = tuple(_job_posting(job) for job in session.scalars(select(Job)).all())
+        rows = session.scalars(
+            select(Job).order_by(Job.scraped_at.desc()).limit(QA_CONTEXT_JOB_LIMIT)
+        ).all()
+        jobs = tuple(_job_posting(job) for job in rows)
 
     context = QueryContext(user=domain_user, jobs=jobs)
     try:

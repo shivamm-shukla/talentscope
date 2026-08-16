@@ -53,3 +53,9 @@ def feed():
 @login_required_page
 def preferences_page():
     return render_template("preferences.html")
+
+
+@pages.get("/app/ask")
+@login_required_page
+def ask_page():
+    return render_template("ask.html")

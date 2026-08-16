@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from core.models import Answer, QueryContext
+from core.models import Answer, JobPosting, QueryContext
 
 GenerateFn = Callable[[str], str]
 
@@ -41,6 +41,19 @@ def _build_prompt(question: str, context: QueryContext) -> str:
     return "\n".join(lines)
 
 
+def _referenced_jobs(text: str, jobs: tuple[JobPosting, ...]) -> tuple[JobPosting, ...]:
+    """Return only the jobs Gemini's answer actually mentions by title or
+    company, instead of every job that was in the prompt — the prompt lists
+    everything for Gemini to consider, but most questions are only about a
+    handful of them."""
+    normalized = text.casefold()
+    return tuple(
+        job
+        for job in jobs
+        if job.title.casefold() in normalized or job.company.casefold() in normalized
+    )
+
+
 class GeminiQAEngine:
     """Answers questions about persisted job data using Gemini."""
 
@@ -48,7 +61,6 @@ class GeminiQAEngine:
         self._generate = generate
 
     def answer(self, question: str, context: QueryContext) -> Answer:
-        text = self._generate(_build_prompt(question, context))
-        return Answer(
-            text=text.strip(), sources=tuple(job.link for job in context.jobs)
-        )
+        text = self._generate(_build_prompt(question, context)).strip()
+        sources = tuple(job.link for job in _referenced_jobs(text, context.jobs))
+        return Answer(text=text, sources=sources)
