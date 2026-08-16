@@ -1,6 +1,6 @@
 # Architecture
 
-This document is the source of truth for TalentScope's module boundaries, interfaces, and
+This document is the source of truth for Santa's module boundaries, interfaces, and
 build sequence. It is written to be followed by anyone (or any tool) implementing the
 system, not just as a description of an existing codebase — as of this writing, no
 application code exists yet. See [BACKLOG.md](./BACKLOG.md) for what's deliberately

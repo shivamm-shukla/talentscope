@@ -1,4 +1,4 @@
-"""Framework-independent TalentScope domain types and contracts."""
+"""Framework-independent Santa domain types and contracts."""
 
 from core.models import (
     Answer,

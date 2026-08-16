@@ -19,7 +19,7 @@ def _default_fetch(url: str) -> bytes:
     # Remotive returns 403 Forbidden for requests without a browser-like
     # User-Agent (urllib's default "Python-urllib/x.y" gets blocked).
     request = Request(
-        url, headers={"User-Agent": "Mozilla/5.0 (compatible; TalentScopeBot/1.0)"}
+        url, headers={"User-Agent": "Mozilla/5.0 (compatible; SantaScoutBot/1.0)"}
     )
     with urlopen(request, timeout=15) as response:  # noqa: S310 - fixed public API URL
         return response.read()

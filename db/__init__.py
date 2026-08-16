@@ -1,4 +1,4 @@
-"""Database configuration and persistence models for TalentScope."""
+"""Database configuration and persistence models for Santa."""
 
 from db.models import Base
 from db.session import create_engine_and_session
