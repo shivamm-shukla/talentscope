@@ -1,21 +1,29 @@
+<div align="center">
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="web/static/assets/logo-dark.svg">
-  <img src="web/static/assets/logo.svg" width="56" height="56" alt="Santa logo">
+  <img src="web/static/assets/logo.svg" width="72" height="72" alt="Santa logo">
 </picture>
 
 # Santa
 
-> **Your career, sorted before you ask.** Santa is a proactive AI career companion for
-> CS/BCA students — the site surfaces what you need, instead of making you search for
-> it. **santa scout**, this codebase, is the first product: internship/job discovery,
-> matched and delivered by email or Telegram. Built with a full SDET-grade test suite
-> and CI pipeline. (Repo is still named `talentscope` after the pre-rebrand project name;
-> the product was also briefly called "Internai" before settling on Santa.)
+### **Your career, sorted before you ask.**
 
-[![CI](https://img.shields.io/badge/CI-pending-lightgrey.svg)](https://github.com/shivamm-shukla/talentscope/actions)
-[![Coverage](https://img.shields.io/badge/coverage-pending-lightgrey.svg)](#)
+**[talentscope-pisc.onrender.com](https://talentscope-pisc.onrender.com/)** — live, closed-cohort signups
+
+[![CI](https://github.com/shivamm-shukla/talentscope/actions/workflows/ci.yml/badge.svg)](https://github.com/shivamm-shukla/talentscope/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+</div>
+
+---
+
+Santa is a proactive AI career companion for CS/BCA students — the site surfaces
+what you need, instead of making you search for it. **santa scout**, this codebase,
+is the first product: internship/job discovery, matched and delivered by email or
+Telegram. Built with a full SDET-grade test suite and CI pipeline. (Repo is still
+named `talentscope` after the pre-rebrand project name; the product was also briefly
+called "Internai" before settling on Santa.)
 
 ---
 
@@ -261,10 +269,10 @@ pipeline itself, so Render's free-tier idle sleep has no effect on data freshnes
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+All rights reserved — see [LICENSE](LICENSE). Source is public for viewing, not for reuse.
 
 ---
 
 ## About
 
-Built by [Shivam Shukla](https://github.com/shivamm-shukla) as a deliberate exercise in production-grade software engineering and SDET practice. Feedback and code review welcome via GitHub issues.
+Built and maintained by [Shivam Shukla](https://github.com/shivamm-shukla).
