@@ -55,6 +55,16 @@ class User:
     name: str = ""
     preferences: UserPreferences = field(default_factory=UserPreferences)
     telegram_chat_id: str | None = None
+    github_username: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GithubRepo:
+    name: str
+    description: str = ""
+    language: str | None = None
+    topics: tuple[str, ...] = ()
+    fork: bool = False
 
 
 @dataclass(frozen=True, slots=True)

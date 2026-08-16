@@ -20,7 +20,7 @@ def test_main_runs_pipeline_once_and_disposes_engine(
     monkeypatch.setattr(
         run_pipeline_once,
         "run_pipeline",
-        lambda session_factory, sources: calls.append(sources),
+        lambda session_factory, sources, **kwargs: calls.append(sources),
     )
 
     run_pipeline_once.main()

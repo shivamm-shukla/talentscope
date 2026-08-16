@@ -2,7 +2,7 @@ name: Pipeline
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 */2 * * *"
   workflow_dispatch: {}
 
 jobs:
@@ -27,4 +27,6 @@ jobs:
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SITE_URL: https://talentscope-pisc.onrender.com
+          GITHUB_TOKEN: ${{ secrets.GH_SYNC_TOKEN }}
         run: python -m workers.run_pipeline_once

@@ -55,6 +55,7 @@ def test_login_logout_and_preference_crud(client) -> None:
             "minimum_stipend": 12000,
             "channels": ["email", "telegram"],
             "telegram_chat_id": "1333041980",
+            "github_username": "octocat",
         },
     )
 
@@ -65,6 +66,8 @@ def test_login_logout_and_preference_crud(client) -> None:
         "minimum_stipend": 12000,
         "channels": ["email", "telegram"],
         "telegram_chat_id": "1333041980",
+        "github_username": "octocat",
+        "github_profile": None,
     }
 
 

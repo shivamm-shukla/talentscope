@@ -61,10 +61,14 @@ class User(UserMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64))
+    github_username: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     preferences: Mapped[UserPreference | None] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+    github_profile: Mapped[GithubProfile | None] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False
     )
     matches: Mapped[list[Match]] = relationship(
@@ -92,6 +96,30 @@ class UserPreference(Base):
         JSON, default=list, nullable=False
     )
     user: Mapped[User] = relationship(back_populates="preferences")
+
+
+class GithubProfile(Base):
+    """Latest synced snapshot of a user's public GitHub activity.
+
+    Kept as a stored snapshot (not fetched live on demand) so a later resume
+    feature can reuse it without re-hitting GitHub's API.
+    """
+
+    __tablename__ = "github_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    repo_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    languages: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    inferred_skills: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    user: Mapped[User] = relationship(back_populates="github_profile")
 
 
 class Match(Base):

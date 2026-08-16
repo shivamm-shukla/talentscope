@@ -10,7 +10,7 @@ from auth.passwords import hash_password, verify_password
 from core.interfaces import QAEngine
 from core.models import JobPosting, QueryContext
 from core.models import User as DomainUser
-from db.models import Job, Match, User, UserPreference
+from db.models import GithubProfile, Job, Match, User, UserPreference
 
 api = Blueprint("api", __name__)
 
@@ -49,23 +49,39 @@ def _job_posting(job: Job) -> JobPosting:
     )
 
 
-def _preference_payload(
-    preferences: UserPreference | None, telegram_chat_id: str | None
-) -> dict[str, object]:
-    if preferences is None:
-        return {
-            "skills": [],
-            "locations": [],
-            "minimum_stipend": None,
-            "channels": [],
-            "telegram_chat_id": telegram_chat_id,
-        }
+def _github_payload(profile: GithubProfile | None) -> dict[str, object] | None:
+    if profile is None:
+        return None
     return {
+        "repo_count": profile.repo_count,
+        "languages": profile.languages,
+        "synced_at": profile.synced_at.isoformat(),
+    }
+
+
+def _preference_payload(
+    preferences: UserPreference | None,
+    telegram_chat_id: str | None,
+    github_username: str | None,
+    github_profile: GithubProfile | None,
+) -> dict[str, object]:
+    base = {
+        "skills": [],
+        "locations": [],
+        "minimum_stipend": None,
+        "channels": [],
+        "telegram_chat_id": telegram_chat_id,
+        "github_username": github_username,
+        "github_profile": _github_payload(github_profile),
+    }
+    if preferences is None:
+        return base
+    return {
+        **base,
         "skills": preferences.skills,
         "locations": preferences.locations,
         "minimum_stipend": preferences.minimum_stipend,
         "channels": preferences.preferred_channels,
-        "telegram_chat_id": telegram_chat_id,
     }
 
 
@@ -122,7 +138,14 @@ def preferences():
         user = session.get(User, current_user.id)
         assert user is not None
         if request.method == "GET":
-            return jsonify(_preference_payload(user.preferences, user.telegram_chat_id))
+            return jsonify(
+                _preference_payload(
+                    user.preferences,
+                    user.telegram_chat_id,
+                    user.github_username,
+                    user.github_profile,
+                )
+            )
         payload = request.get_json(silent=True) or {}
         preference = user.preferences or UserPreference()
         if user.preferences is None:
@@ -151,8 +174,20 @@ def preferences():
             if value is not None and not isinstance(value, str):
                 return jsonify(error="telegram_chat_id must be a string"), 400
             user.telegram_chat_id = value
+        if "github_username" in payload:
+            value = payload["github_username"]
+            if value is not None and not isinstance(value, str):
+                return jsonify(error="github_username must be a string"), 400
+            user.github_username = value
         session.commit()
-        return jsonify(_preference_payload(preference, user.telegram_chat_id))
+        return jsonify(
+            _preference_payload(
+                preference,
+                user.telegram_chat_id,
+                user.github_username,
+                user.github_profile,
+            )
+        )
 
 
 @api.get("/matches")

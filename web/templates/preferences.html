@@ -22,6 +22,10 @@
     <label>Telegram chat ID <span class="field-hint">optional, message @internai_alerts_bot to get yours</span>
       <input type="text" name="telegram_chat_id">
     </label>
+    <label>GitHub username <span class="field-hint">optional — santa checks your public repos periodically and adds any skills it finds to the list above</span>
+      <input type="text" name="github_username" placeholder="octocat">
+    </label>
+    <p class="muted" id="github-status"></p>
     <p class="form-error" id="form-error" hidden></p>
     <p class="form-success" id="form-success" hidden>Saved.</p>
     <button type="submit" class="btn btn-primary btn-block">Save preferences</button>
@@ -34,6 +38,7 @@
 const form = document.getElementById('prefs-form');
 const errorEl = document.getElementById('form-error');
 const successEl = document.getElementById('form-success');
+const githubStatusEl = document.getElementById('github-status');
 
 function splitList(value) {
   return value.split(',').map((s) => s.trim()).filter(Boolean);
@@ -50,10 +55,19 @@ async function loadPreferences() {
   form.locations.value = (prefs.locations || []).join(', ');
   form.minimum_stipend.value = prefs.minimum_stipend ?? '';
   form.telegram_chat_id.value = prefs.telegram_chat_id || '';
+  form.github_username.value = prefs.github_username || '';
   (prefs.channels || []).forEach((channel) => {
     const box = form.querySelector(`input[name="channels"][value="${channel}"]`);
     if (box) box.checked = true;
   });
+  if (!prefs.github_username) {
+    githubStatusEl.textContent = '';
+  } else if (prefs.github_profile) {
+    const synced = new Date(prefs.github_profile.synced_at).toLocaleString();
+    githubStatusEl.textContent = `Synced ${prefs.github_profile.repo_count} repos, last checked ${synced}.`;
+  } else {
+    githubStatusEl.textContent = 'Not synced yet — santa checks periodically, this can take a couple hours.';
+  }
 }
 
 form.addEventListener('submit', async (event) => {
@@ -67,6 +81,7 @@ form.addEventListener('submit', async (event) => {
     minimum_stipend: form.minimum_stipend.value ? Number(form.minimum_stipend.value) : null,
     channels,
     telegram_chat_id: form.telegram_chat_id.value.trim() || null,
+    github_username: form.github_username.value.trim() || null,
   };
   const response = await fetch('/preferences', {
     method: 'PUT',

@@ -247,7 +247,7 @@ background workers/cron jobs).
    - `GEMINI_MODEL` — optional, defaults to `gemini-flash-latest`
 3. **GitHub Actions** — add these as repo secrets (Settings → Secrets and variables →
    Actions) so [`.github/workflows/pipeline.yml`](./.github/workflows/pipeline.yml) can
-   run the scrape/analyze/match/notify pipeline on its 6-hour cron:
+   run the scrape/analyze/match/notify pipeline on its 2-hour cron:
    - `DATABASE_URL` — same Neon connection string
    - `SMTP_SENDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` — for
      users with `email` in their preferred channels
