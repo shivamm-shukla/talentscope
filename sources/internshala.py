@@ -62,9 +62,7 @@ def _parse_posted_at(text: str | None, now: datetime) -> datetime | None:
     return now - delta
 
 
-def parse_job_postings(
-    document: str, now: datetime | None = None
-) -> list[JobPosting]:
+def parse_job_postings(document: str, now: datetime | None = None) -> list[JobPosting]:
     """Normalize job postings from an Internshala listing page's HTML."""
     now = now or datetime.now(timezone.utc)
     postings: list[JobPosting] = []
@@ -85,9 +83,7 @@ def parse_job_postings(
                 company=_plain_text(company.group(1)),
                 location=_plain_text(location.group(1)) if location else "Remote",
                 link=urljoin(INTERNSHALA_BASE_URL, card.group("href")),
-                posted_at=_parse_posted_at(
-                    posted.group(1) if posted else None, now
-                ),
+                posted_at=_parse_posted_at(posted.group(1) if posted else None, now),
                 salary_raw=stipend.group(1).strip() if stipend else None,
                 skills=tuple(_SKILL_RE.findall(body)),
                 description=_plain_text(description.group(1)) if description else "",
