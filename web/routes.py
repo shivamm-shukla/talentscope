@@ -40,6 +40,12 @@ def _job_posting(job: Job) -> JobPosting:
         salary_raw=job.salary_raw,
         salary_numeric=job.salary_numeric,
         skills=tuple(job.skills),
+        listing_type=job.listing_type,
+        work_mode=job.work_mode,
+        pay_type=job.pay_type,
+        duration_months=job.duration_months,
+        target_year=job.target_year,
+        expires_at=job.expires_at,
     )
 
 
@@ -172,6 +178,11 @@ def matches():
                         "link": match.job.link,
                         "salary_raw": match.job.salary_raw,
                         "skills": match.job.skills,
+                        "listing_type": match.job.listing_type,
+                        "work_mode": match.job.work_mode,
+                        "pay_type": match.job.pay_type,
+                        "duration_months": match.job.duration_months,
+                        "target_year": match.job.target_year,
                     },
                 }
                 for match in rows

@@ -1,4 +1,4 @@
-"""Relational persistence model for TalentScope's Phase B pipeline."""
+"""Relational persistence model for Santa's job-matching pipeline."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
-    """Base class for every TalentScope ORM model."""
+    """Base class for every Santa ORM model."""
 
 
 class Job(Base):
@@ -42,6 +42,12 @@ class Job(Base):
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
+    listing_type: Mapped[str | None] = mapped_column(String(32))
+    work_mode: Mapped[str | None] = mapped_column(String(32))
+    pay_type: Mapped[str | None] = mapped_column(String(32))
+    duration_months: Mapped[int | None] = mapped_column(Integer)
+    target_year: Mapped[str | None] = mapped_column(String(16))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     matches: Mapped[list[Match]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )
