@@ -1,103 +1,98 @@
-"""Playwright-backed Internshala adapter using embedded job metadata."""
+"""Playwright-backed Internshala adapter, parsed from the listing page's DOM.
+
+Internshala used to embed each posting as JobPosting JSON-LD, but the site no
+longer emits that structured data on either the listing or detail pages —
+only an unrelated FAQPage/BreadcrumbList/ItemList/SoftwareApplication set of
+blocks remains. The listing cards still carry every field we need in plain
+HTML, so we scrape those directly instead.
+"""
 
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from html import unescape
+from urllib.parse import urljoin
 
 from core.models import JobPosting
 
 INTERNSHALA_INTERNSHIPS_URL = "https://internshala.com/internships/"
+INTERNSHALA_BASE_URL = "https://internshala.com"
+
+_CARD_RE = re.compile(
+    r'<div class="container-fluid individual_internship[^"]*"[^>]*'
+    r'internshipid="(?P<id>\d+)"[^>]*data-href="(?P<href>[^"]+)"[^>]*>'
+    r"(?P<body>.*?)"
+    r'(?=<div class="container-fluid individual_internship|\Z)',
+    re.DOTALL,
+)
+_TITLE_RE = re.compile(r'class="job-title-href"[^>]*>(.*?)</a>', re.DOTALL)
+_COMPANY_RE = re.compile(r'class="company-name">\s*(.*?)\s*</p>', re.DOTALL)
+_LOCATION_RE = re.compile(r'class="row-1-item locations">.*?<a>(.*?)</a>', re.DOTALL)
+_STIPEND_RE = re.compile(r'class="stipend">([^<]*)</span>')
+_SKILL_RE = re.compile(r'class="job_skill">([^<]*)</div>')
+_DESCRIPTION_RE = re.compile(
+    r'class="about_job">.*?class="text">(.*?)</div>', re.DOTALL
+)
+_POSTED_RE = re.compile(r'class="status-\w+"><i[^>]*></i><span>([^<]*)</span>')
+_RELATIVE_UNIT_RE = re.compile(r"(\d+)\s+(hour|day|week|month)s?\s+ago", re.IGNORECASE)
 
 
 def _plain_text(html: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", unescape(html))).strip()
 
 
-def _parse_datetime(value: str | None) -> datetime | None:
-    if not value:
+def _parse_posted_at(text: str | None, now: datetime) -> datetime | None:
+    if not text:
         return None
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
-
-
-def _location(value: object) -> str:
-    if isinstance(value, list):
-        return ", ".join(_location(item) for item in value)
-    if isinstance(value, dict):
-        address = value.get("address")
-        if isinstance(address, dict):
-            return str(
-                address.get("addressLocality")
-                or address.get("addressCountry")
-                or "Remote"
-            )
-        return str(value.get("name") or "Remote")
-    return str(value or "Remote")
-
-
-def _organization_name(value: object) -> str:
-    if isinstance(value, dict) and isinstance(value.get("name"), str):
-        return value["name"]
-    return "Unknown company"
-
-
-def _skills(value: object) -> tuple[str, ...]:
-    if isinstance(value, str):
-        return tuple(skill.strip() for skill in value.split(",") if skill.strip())
-    if isinstance(value, list):
-        return tuple(str(skill).strip() for skill in value if str(skill).strip())
-    return ()
-
-
-def _salary(value: object) -> str | None:
-    if not isinstance(value, dict):
+    normalized = text.strip().lower()
+    if normalized in ("today", "few hours ago", "just now"):
+        return now
+    match = _RELATIVE_UNIT_RE.search(normalized)
+    if not match:
         return None
-    amount = value.get("value")
-    currency = value.get("currency")
-    if isinstance(amount, dict):
-        amount = amount.get("value") or amount.get("minValue")
-    if amount is None:
-        return None
-    return f"{currency or ''} {amount}".strip()
+    amount, unit = int(match.group(1)), match.group(2)
+    delta = {
+        "hour": timedelta(hours=amount),
+        "day": timedelta(days=amount),
+        "week": timedelta(weeks=amount),
+        "month": timedelta(days=amount * 30),
+    }[unit]
+    return now - delta
 
 
-def parse_job_postings(document: str) -> list[JobPosting]:
-    """Normalize JobPosting JSON-LD blocks from an Internshala listing document."""
-    blocks = re.findall(
-        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
-        document,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
+def parse_job_postings(
+    document: str, now: datetime | None = None
+) -> list[JobPosting]:
+    """Normalize job postings from an Internshala listing page's HTML."""
+    now = now or datetime.now(timezone.utc)
     postings: list[JobPosting] = []
-    for block in blocks:
-        try:
-            decoded = json.loads(block)
-        except json.JSONDecodeError:
+    for card in _CARD_RE.finditer(document):
+        body = card.group("body")
+        title = _TITLE_RE.search(body)
+        company = _COMPANY_RE.search(body)
+        if not title or not company:
             continue
-        entries = decoded if isinstance(decoded, list) else [decoded]
-        for entry in entries:
-            if not isinstance(entry, dict) or entry.get("@type") != "JobPosting":
-                continue
-            title = entry.get("title")
-            url = entry.get("url")
-            if not isinstance(title, str) or not isinstance(url, str):
-                continue
-            postings.append(
-                JobPosting(
-                    source="internshala",
-                    title=title.strip(),
-                    company=_organization_name(entry.get("hiringOrganization")),
-                    location=_location(entry.get("jobLocation")),
-                    link=url.strip(),
-                    posted_at=_parse_datetime(entry.get("datePosted")),
-                    salary_raw=_salary(entry.get("baseSalary")),
-                    skills=_skills(entry.get("skills")),
-                    description=_plain_text(str(entry.get("description") or "")),
-                )
+        location = _LOCATION_RE.search(body)
+        stipend = _STIPEND_RE.search(body)
+        posted = _POSTED_RE.search(body)
+        description = _DESCRIPTION_RE.search(body)
+        postings.append(
+            JobPosting(
+                source="internshala",
+                title=_plain_text(title.group(1)),
+                company=_plain_text(company.group(1)),
+                location=_plain_text(location.group(1)) if location else "Remote",
+                link=urljoin(INTERNSHALA_BASE_URL, card.group("href")),
+                posted_at=_parse_posted_at(
+                    posted.group(1) if posted else None, now
+                ),
+                salary_raw=stipend.group(1).strip() if stipend else None,
+                skills=tuple(_SKILL_RE.findall(body)),
+                description=_plain_text(description.group(1)) if description else "",
             )
+        )
     return postings
 
 
@@ -109,9 +104,7 @@ def _fetch_listing_html(url: str) -> str:
         context = browser.new_context()
         page = context.new_page()
         page.goto(url, wait_until="domcontentloaded")
-        page.locator("script[type='application/ld+json']").first.wait_for(
-            state="attached"
-        )
+        page.locator(".individual_internship").first.wait_for(state="attached")
         html = page.content()
         context.close()
         browser.close()
