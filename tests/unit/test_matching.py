@@ -41,6 +41,15 @@ def test_matcher_excludes_jobs_outside_required_location_or_stipend() -> None:
     )
 
 
+def test_matcher_excludes_jobs_with_no_skill_overlap_when_skills_are_the_only_preference() -> (
+    None
+):
+    preferences = UserPreferences(skills=("python",))
+
+    assert match_jobs(preferences, [job(skills=("Java", "Spring"))]) == []
+    assert len(match_jobs(preferences, [job(skills=("Python",))])) == 1
+
+
 def test_matcher_ranks_more_relevant_jobs_first() -> None:
     preferences = UserPreferences(skills=("python", "sql"))
     less_relevant = job(title="A job", skills=("Python",))
