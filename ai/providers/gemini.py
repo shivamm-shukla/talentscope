@@ -24,7 +24,7 @@ def gemini_generate(api_key: str, model: str) -> GenerateFn:
 
 def _build_prompt(question: str, context: QueryContext) -> str:
     lines = [
-        "You are TalentScope's internship Q&A assistant.",
+        "You are santa scout's internship Q&A assistant.",
         "Answer the student's question using only the job listings below.",
         "",
         f"Question: {question}",

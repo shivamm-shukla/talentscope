@@ -1,6 +1,16 @@
-# TalentScope
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="web/static/assets/logo-dark.svg">
+  <img src="web/static/assets/logo.svg" width="56" height="56" alt="Santa logo">
+</picture>
 
-> An internship intelligence tool for students — scrapes job boards, sends matched alerts, and surfaces skill/market trends. Built with a full SDET-grade test suite and CI pipeline.
+# Santa
+
+> **Your career, sorted before you ask.** Santa is a proactive AI career companion for
+> CS/BCA students — the site surfaces what you need, instead of making you search for
+> it. **santa scout**, this codebase, is the first product: internship/job discovery,
+> matched and delivered by email or Telegram. Built with a full SDET-grade test suite
+> and CI pipeline. (Repo is still named `talentscope` after the pre-rebrand project name;
+> the product was also briefly called "Internai" before settling on Santa.)
 
 [![CI](https://img.shields.io/badge/CI-pending-lightgrey.svg)](https://github.com/shivamm-shukla/talentscope/actions)
 [![Coverage](https://img.shields.io/badge/coverage-pending-lightgrey.svg)](#)
@@ -11,32 +21,61 @@
 
 ## Status
 
-🚧 **Active development.** This is a rebuild of [JobTrendTracker](https://github.com/shivamm-shukla) with a production-grade architecture, full test pyramid, and CI/CD. See the [roadmap](#roadmap) for current progress.
+🚧 **Active development.** Built with a production-grade architecture, full test pyramid, and CI/CD from day one. See the [roadmap](#roadmap) for current progress.
 
 The project is intentionally built like it has real users — full auth, real notifications, deployed publicly — but is being validated with a closed cohort (myself + 2-3 batchmates) before opening signups.
 
 ---
 
-## Why this project exists
+## Product vision
 
-JobTrendTracker (v1) solved the problem but had three weaknesses I wanted to fix in a rebuild:
+**Santa** is the umbrella brand for a proactive AI career companion for CS/BCA
+students — the site should tell students what they need to know, not make them go
+searching for it. **santa scout** (this codebase) is the first product: internship
+and job discovery. Planned siblings, not yet built:
 
-1. **No automated tests.** Scrapers and APIs need test suites — without them, every Internshala layout change is a silent failure.
-2. **CSV-based storage.** Doesn't scale, can't be queried, breaks on concurrent writes.
-3. **No CI.** Bugs only got caught when something visibly broke in production.
+| Product | What it does | Status |
+|---|---|---|
+| **santa scout** | Internship/job discovery: scrape, classify, match, alert | 🟢 Live |
+| **santa prep** | AI mock-interview trainer | ⚪ Planned |
+| **santa desk** | Calendar, email & meeting management agent | ⚪ Planned |
+| **santa vaani** | Voice & call companion (reminders, check-ins) | ⚪ Planned |
 
-TalentScope addresses each of these explicitly. The product value is for students; the engineering rigor is for me.
+Scope for santa scout is deliberately narrow: **CS/BCA/computer-related-course
+students only** (not every field), and postings whose application window has
+already lapsed are never stored or shown — both decisions trade coverage for
+signal quality and lower scraping/storage cost.
+
+---
+
+## Engineering principles
+
+Three non-negotiables that shape every module in this codebase:
+
+1. **No untested scrapers.** Source adapters are tested against saved HTML/JSON
+   fixtures — a layout change on the source site should never fail silently.
+2. **Real storage, not CSVs.** Postgres in production, SQLAlchemy models, Alembic
+   migrations — queryable, concurrent-write-safe from the start.
+3. **CI-gated merges.** Nothing reaches `main` without tests passing and coverage
+   holding the line (see [CI gate](#project-conventions)).
+
+The product value is for students; the engineering rigor is for me.
 
 ---
 
 ## What it does
 
-### For users (students looking for internships)
+### For users (CS/BCA students)
 
-- **Daily-curated internship feed** scraped from Internshala (Playwright) and Remotive API
+- **Web app** (`/`, `/app`) — signup, preferences, and a proactive matches feed, with light/dark theme
+- **Daily-curated internship/job feed** scraped from Internshala (Playwright) and Remotive API, filtered to CS/BCA-relevant postings only
+- **Classification** of every posting into listing type (internship/job), work mode (remote/onsite/hybrid), pay type, duration, and target year — so the feed reads like a briefing, not a search-results page
+- **Retention policy** — postings past their estimated application window are never stored or shown
 - **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences
-- **Market trends dashboard** — which skills are rising, which cities are hiring, stipend distributions
-- **Natural-language Q&A** — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
+- **Natural-language Q&A** (API today, no dedicated page yet) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
+
+Not yet exposed: a market-trends dashboard (skill/city/stipend trends) — the
+analysis logic exists in `analysis/trends.py` but no route surfaces it yet.
 
 ### For me (the engineer)
 
@@ -85,7 +124,7 @@ A more detailed walkthrough of design decisions lives in [`ARCHITECTURE.md`](./A
 | Layer | Choice | Why |
 |---|---|---|
 | Language | Python 3.11 | Familiarity + ecosystem |
-| Web | Flask | Lightweight, well-tested, matches scope |
+| Web | Flask + Jinja templates | Server-rendered pages calling the same JSON API the Flask backend exposes |
 | ORM | SQLAlchemy + Alembic | Same code runs against Postgres (prod) and SQLite (tests) |
 | DB | Postgres (Neon, free) / SQLite (test) | Free-forever managed Postgres; tests stay fast |
 | Scraping | Playwright + pytest-playwright | Handles dynamic Internshala pages |
@@ -139,6 +178,9 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [x] ≥70% coverage (99% on covered modules as of the AI Q&A endpoint)
 - [x] Structured JSON logging
 - [x] Render deployment (code/config ready — see "Deploying" below for the manual account-setup steps)
+- [x] Web UI (landing, signup/login, preferences, matches feed) with light/dark theme
+- [x] CS/BCA relevance filter + listing taxonomy (work mode, pay type, duration, target year) at ingestion
+- [x] Expiry-based retention (don't store/list postings past their application window)
 
 ### Explicitly out of scope for v1
 

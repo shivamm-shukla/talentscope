@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Your feed — Santa{% endblock %}
+{% block content %}
+<section class="feed-header">
+  <h1>Here's what santa found for you</h1>
+  <p class="muted" id="feed-sub">Loading your matches…</p>
+</section>
+
+<section id="empty-state" class="card empty-state" hidden>
+  <h2>Nothing matched yet</h2>
+  <p>Santa needs to know what you're looking for. Set your skills, locations and
+    stipend and check back — matches are computed automatically as new postings
+    come in.</p>
+  <a class="btn btn-primary" href="{{ url_for('pages.preferences_page') }}">Set preferences</a>
+</section>
+
+<section id="feed-list" class="feed-list"></section>
+{% endblock %}
+{% block scripts %}
+<script>
+const feedSub = document.getElementById('feed-sub');
+const feedList = document.getElementById('feed-list');
+const emptyState = document.getElementById('empty-state');
+
+function scoreLabel(score) {
+  if (score >= 80) return 'Strong match';
+  if (score >= 50) return 'Good match';
+  return 'Possible match';
+}
+
+const YEAR_LABELS = { '1st': '1st year', '2nd': '2nd year', '3rd': '3rd year', final: 'Final year', any: 'Any year' };
+const PAY_LABELS = { fixed_stipend: 'Fixed stipend', per_hour: 'Per hour', per_task: 'Per task' };
+
+function jobTags(job) {
+  const tags = [];
+  if (job.listing_type) tags.push(job.listing_type === 'internship' ? 'Internship' : 'Job');
+  if (job.work_mode) tags.push(job.work_mode.charAt(0).toUpperCase() + job.work_mode.slice(1));
+  if (job.pay_type) tags.push(PAY_LABELS[job.pay_type] || job.pay_type);
+  if (job.duration_months) tags.push(`${job.duration_months} mo`);
+  if (job.target_year && job.target_year !== 'any') tags.push(YEAR_LABELS[job.target_year] || job.target_year);
+  return tags;
+}
+
+async function loadFeed() {
+  const response = await fetch('/matches', { headers: { Accept: 'application/json' } });
+  if (response.status === 401) {
+    window.location.href = "{{ url_for('pages.login_page') }}";
+    return;
+  }
+  const matches = await response.json();
+  if (!matches.length) {
+    feedSub.textContent = 'No matches yet.';
+    emptyState.hidden = false;
+    return;
+  }
+  feedSub.textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'}, best first.`;
+  feedList.innerHTML = matches.map((m) => `
+    <article class="card job-card">
+      <div class="job-card-top">
+        <span class="score-pill">${scoreLabel(m.score)}</span>
+      </div>
+      <h3>${m.job.title}</h3>
+      <p class="job-meta">${m.job.company} · ${m.job.location}${m.job.salary_raw ? ' · ' + m.job.salary_raw : ''}</p>
+      ${jobTags(m.job).length ? `<p class="job-tags">${jobTags(m.job).map((t) => `<span class="tag">${t}</span>`).join('')}</p>` : ''}
+      ${m.job.skills && m.job.skills.length ? `<p class="job-skills">${m.job.skills.join(', ')}</p>` : ''}
+      <a class="btn btn-secondary" href="${m.job.link}" target="_blank" rel="noopener">View posting</a>
+    </article>
+  `).join('');
+}
+
+loadFeed();
+</script>
+{% endblock %}

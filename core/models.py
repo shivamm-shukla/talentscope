@@ -32,6 +32,12 @@ class JobPosting:
     salary_numeric: int | None = None
     skills: tuple[str, ...] = ()
     description: str = ""
+    listing_type: str | None = None
+    work_mode: str | None = None
+    pay_type: str | None = None
+    duration_months: int | None = None
+    target_year: str | None = None
+    expires_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)

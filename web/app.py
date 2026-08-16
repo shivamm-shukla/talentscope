@@ -1,4 +1,4 @@
-"""TalentScope Flask application factory."""
+"""Santa Flask application factory."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from flask_login import LoginManager
 from core.logging import configure_json_logging
 from db.models import Base, User
 from db.session import create_engine_and_session
+from web.pages import pages
 from web.routes import api
 
 
@@ -39,4 +40,5 @@ def create_app(config: dict[str, object] | None = None) -> Flask:
             return session.get(User, int(user_id))
 
     app.register_blueprint(api)
+    app.register_blueprint(pages)
     return app

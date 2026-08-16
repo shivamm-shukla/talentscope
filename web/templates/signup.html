@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Sign up — Santa{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <h1>Create your account</h1>
+  <p class="muted">Takes a minute. Set your preferences next and santa scout starts finding matches.</p>
+  <form id="signup-form" class="form" novalidate>
+    <label>Email
+      <input type="email" name="email" required autocomplete="email">
+    </label>
+    <label>Password
+      <input type="password" name="password" minlength="8" required autocomplete="new-password">
+    </label>
+    <p class="field-hint">At least 8 characters.</p>
+    <p class="form-error" id="form-error" hidden></p>
+    <button type="submit" class="btn btn-primary btn-block">Create account</button>
+  </form>
+  <p class="muted">Already have an account? <a href="{{ url_for('pages.login_page') }}">Log in</a></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('signup-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const errorEl = document.getElementById('form-error');
+  errorEl.hidden = true;
+  const body = {
+    email: form.email.value,
+    password: form.password.value,
+  };
+  const response = await fetch('/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (response.ok) {
+    window.location.href = "{{ url_for('pages.preferences_page') }}";
+    return;
+  }
+  const data = await response.json().catch(() => ({}));
+  errorEl.textContent = data.error || 'Something went wrong. Please try again.';
+  errorEl.hidden = false;
+});
+</script>
+{% endblock %}

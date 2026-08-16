@@ -41,7 +41,7 @@ class EmailNotifier:
         self,
         sender_address: str,
         smtp_factory: SmtpFactory,
-        subject: str = "New TalentScope matches",
+        subject: str = "New santa scout matches",
     ) -> None:
         self._sender_address = sender_address
         self._smtp_factory = smtp_factory
