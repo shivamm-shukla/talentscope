@@ -53,7 +53,8 @@ def test_login_logout_and_preference_crud(client) -> None:
             "skills": ["python"],
             "locations": ["Remote"],
             "minimum_stipend": 12000,
-            "channels": ["email"],
+            "channels": ["email", "telegram"],
+            "telegram_chat_id": "1333041980",
         },
     )
 
@@ -62,7 +63,8 @@ def test_login_logout_and_preference_crud(client) -> None:
         "skills": ["python"],
         "locations": ["Remote"],
         "minimum_stipend": 12000,
-        "channels": ["email"],
+        "channels": ["email", "telegram"],
+        "telegram_chat_id": "1333041980",
     }
 
 

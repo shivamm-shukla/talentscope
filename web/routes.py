@@ -43,14 +43,23 @@ def _job_posting(job: Job) -> JobPosting:
     )
 
 
-def _preference_payload(preferences: UserPreference | None) -> dict[str, object]:
+def _preference_payload(
+    preferences: UserPreference | None, telegram_chat_id: str | None
+) -> dict[str, object]:
     if preferences is None:
-        return {"skills": [], "locations": [], "minimum_stipend": None, "channels": []}
+        return {
+            "skills": [],
+            "locations": [],
+            "minimum_stipend": None,
+            "channels": [],
+            "telegram_chat_id": telegram_chat_id,
+        }
     return {
         "skills": preferences.skills,
         "locations": preferences.locations,
         "minimum_stipend": preferences.minimum_stipend,
         "channels": preferences.preferred_channels,
+        "telegram_chat_id": telegram_chat_id,
     }
 
 
@@ -107,7 +116,7 @@ def preferences():
         user = session.get(User, current_user.id)
         assert user is not None
         if request.method == "GET":
-            return jsonify(_preference_payload(user.preferences))
+            return jsonify(_preference_payload(user.preferences, user.telegram_chat_id))
         payload = request.get_json(silent=True) or {}
         preference = user.preferences or UserPreference()
         if user.preferences is None:
@@ -131,8 +140,13 @@ def preferences():
                     400,
                 )
             preference.minimum_stipend = value
+        if "telegram_chat_id" in payload:
+            value = payload["telegram_chat_id"]
+            if value is not None and not isinstance(value, str):
+                return jsonify(error="telegram_chat_id must be a string"), 400
+            user.telegram_chat_id = value
         session.commit()
-        return jsonify(_preference_payload(preference))
+        return jsonify(_preference_payload(preference, user.telegram_chat_id))
 
 
 @api.get("/matches")
