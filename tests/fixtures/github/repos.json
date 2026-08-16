@@ -1,0 +1,23 @@
+[
+  {
+    "name": "job-matcher",
+    "description": "A Flask app that matches internships to student skills.",
+    "language": "Python",
+    "topics": ["python", "flask", "sql"],
+    "fork": false
+  },
+  {
+    "name": "portfolio-site",
+    "description": "My personal site, built with React.",
+    "language": "JavaScript",
+    "topics": ["react"],
+    "fork": false
+  },
+  {
+    "name": "some-forked-repo",
+    "description": "A fork of someone else's Java project.",
+    "language": "Java",
+    "topics": [],
+    "fork": true
+  }
+]

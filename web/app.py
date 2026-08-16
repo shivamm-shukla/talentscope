@@ -21,6 +21,7 @@ def create_app(config: dict[str, object] | None = None) -> Flask:
         SECRET_KEY=os.environ.get("SECRET_KEY", "development-only-change-me"),
         DATABASE_URL=os.environ.get("DATABASE_URL", "sqlite:///talentscope.db"),
         CREATE_DATABASE=False,
+        MAX_CONTENT_LENGTH=20 * 1024 * 1024,
     )
     if config:
         app.config.update(config)

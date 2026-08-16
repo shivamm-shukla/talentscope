@@ -22,9 +22,21 @@
     <label>Telegram chat ID <span class="field-hint">optional, message @internai_alerts_bot to get yours</span>
       <input type="text" name="telegram_chat_id">
     </label>
+    <label>GitHub username <span class="field-hint">optional — santa checks your public repos periodically and adds any skills it finds to the list above</span>
+      <input type="text" name="github_username" placeholder="octocat">
+    </label>
+    <p class="muted" id="github-status"></p>
     <p class="form-error" id="form-error" hidden></p>
     <p class="form-success" id="form-success" hidden>Saved.</p>
     <button type="submit" class="btn btn-primary btn-block">Save preferences</button>
+  </form>
+  <form id="linkedin-form" class="form" novalidate>
+    <label>Import LinkedIn data <span class="field-hint">optional — download your export from LinkedIn's Settings &amp; Privacy → "Get a copy of your data", then upload the .zip here</span>
+      <input type="file" name="export" accept=".zip">
+    </label>
+    <p class="muted" id="linkedin-status"></p>
+    <p class="form-error" id="linkedin-error" hidden></p>
+    <button type="submit" class="btn btn-secondary btn-block">Import</button>
   </form>
   <p class="muted"><a href="{{ url_for('pages.feed') }}">Back to your feed</a></p>
 </section>
@@ -34,6 +46,10 @@
 const form = document.getElementById('prefs-form');
 const errorEl = document.getElementById('form-error');
 const successEl = document.getElementById('form-success');
+const githubStatusEl = document.getElementById('github-status');
+const linkedinForm = document.getElementById('linkedin-form');
+const linkedinStatusEl = document.getElementById('linkedin-status');
+const linkedinErrorEl = document.getElementById('linkedin-error');
 
 function splitList(value) {
   return value.split(',').map((s) => s.trim()).filter(Boolean);
@@ -50,10 +66,25 @@ async function loadPreferences() {
   form.locations.value = (prefs.locations || []).join(', ');
   form.minimum_stipend.value = prefs.minimum_stipend ?? '';
   form.telegram_chat_id.value = prefs.telegram_chat_id || '';
+  form.github_username.value = prefs.github_username || '';
   (prefs.channels || []).forEach((channel) => {
     const box = form.querySelector(`input[name="channels"][value="${channel}"]`);
     if (box) box.checked = true;
   });
+  if (!prefs.github_username) {
+    githubStatusEl.textContent = '';
+  } else if (prefs.github_profile) {
+    const synced = new Date(prefs.github_profile.synced_at).toLocaleString();
+    githubStatusEl.textContent = `Synced ${prefs.github_profile.repo_count} repos, last checked ${synced}.`;
+  } else {
+    githubStatusEl.textContent = 'Not synced yet — santa checks periodically, this can take a couple hours.';
+  }
+  if (prefs.linkedin_profile) {
+    const synced = new Date(prefs.linkedin_profile.synced_at).toLocaleString();
+    linkedinStatusEl.textContent = `Imported ${prefs.linkedin_profile.position_count} positions, ${prefs.linkedin_profile.skill_count} skills — last updated ${synced}.`;
+  } else {
+    linkedinStatusEl.textContent = 'Not imported yet.';
+  }
 }
 
 form.addEventListener('submit', async (event) => {
@@ -67,6 +98,7 @@ form.addEventListener('submit', async (event) => {
     minimum_stipend: form.minimum_stipend.value ? Number(form.minimum_stipend.value) : null,
     channels,
     telegram_chat_id: form.telegram_chat_id.value.trim() || null,
+    github_username: form.github_username.value.trim() || null,
   };
   const response = await fetch('/preferences', {
     method: 'PUT',
@@ -80,6 +112,31 @@ form.addEventListener('submit', async (event) => {
   const data = await response.json().catch(() => ({}));
   errorEl.textContent = data.error || 'Could not save preferences.';
   errorEl.hidden = false;
+});
+
+linkedinForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  linkedinErrorEl.hidden = true;
+  const file = linkedinForm.export.files[0];
+  if (!file) {
+    linkedinErrorEl.textContent = 'Choose a .zip file first.';
+    linkedinErrorEl.hidden = false;
+    return;
+  }
+  const formData = new FormData();
+  formData.append('export', file);
+  const response = await fetch('/preferences/linkedin-import', {
+    method: 'POST',
+    body: formData,
+  });
+  if (response.ok) {
+    linkedinForm.reset();
+    await loadPreferences();
+    return;
+  }
+  const data = await response.json().catch(() => ({}));
+  linkedinErrorEl.textContent = data.error || 'Could not import that file.';
+  linkedinErrorEl.hidden = false;
 });
 
 loadPreferences();
