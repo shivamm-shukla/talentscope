@@ -33,7 +33,12 @@ def run(
     """Fetch sources and commit normalized postings in one transaction."""
     fetched = created = 0
     for source in sources:
-        for posting in source.fetch(since=since):
+        try:
+            postings = source.fetch(since=since)
+        except Exception:
+            logger.exception("source %s failed to fetch; skipping", source.name)
+            continue
+        for posting in postings:
             fetched += 1
             _, was_created = upsert_job(session, posting)
             created += was_created

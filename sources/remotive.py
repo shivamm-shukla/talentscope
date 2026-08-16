@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import datetime
 from html import unescape
 from typing import Any
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from core.models import JobPosting
 
@@ -16,7 +16,12 @@ REMOTIVE_JOBS_URL = "https://remotive.com/api/remote-jobs"
 
 
 def _default_fetch(url: str) -> bytes:
-    with urlopen(url, timeout=15) as response:  # noqa: S310 - fixed public API URL
+    # Remotive returns 403 Forbidden for requests without a browser-like
+    # User-Agent (urllib's default "Python-urllib/x.y" gets blocked).
+    request = Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (compatible; TalentScopeBot/1.0)"}
+    )
+    with urlopen(request, timeout=15) as response:  # noqa: S310 - fixed public API URL
         return response.read()
 
 
