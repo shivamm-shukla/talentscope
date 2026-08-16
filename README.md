@@ -79,7 +79,8 @@ The product value is for students; the engineering rigor is for me.
 - **Daily-curated internship/job feed** scraped from Internshala (Playwright) and Remotive API, filtered to CS/BCA-relevant postings only
 - **Classification** of every posting into listing type (internship/job), work mode (remote/onsite/hybrid), pay type, duration, and target year — so the feed reads like a briefing, not a search-results page
 - **Retention policy** — postings past their estimated application window are never stored or shown
-- **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences
+- **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences, ranked by how closely a job's skill demands fit what the user actually knows
+- **GitHub skill sync** — link a GitHub username and santa periodically scans public repos to keep the skills list current; **LinkedIn import** — upload a LinkedIn data export (self-service, no scraping) to pull in positions, education, and skills the same way. Both feed the same skill vocabulary and are stored for a future resume-builder feature to reuse
 - **Natural-language Q&A** (API today, no dedicated page yet) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
 
 Not yet exposed: a market-trends dashboard (skill/city/stipend trends) — the
@@ -247,7 +248,7 @@ background workers/cron jobs).
    - `GEMINI_MODEL` — optional, defaults to `gemini-flash-latest`
 3. **GitHub Actions** — add these as repo secrets (Settings → Secrets and variables →
    Actions) so [`.github/workflows/pipeline.yml`](./.github/workflows/pipeline.yml) can
-   run the scrape/analyze/match/notify pipeline on its 6-hour cron:
+   run the scrape/analyze/match/notify pipeline on its 2-hour cron:
    - `DATABASE_URL` — same Neon connection string
    - `SMTP_SENDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` — for
      users with `email` in their preferred channels

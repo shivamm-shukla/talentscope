@@ -24,7 +24,7 @@ def test_matcher_scores_and_explains_matching_job() -> None:
     matches = match_jobs(preferences, [job()])
 
     assert len(matches) == 1
-    assert matches[0].score == 0.7
+    assert matches[0].score == 0.55
     assert matches[0].reasons == (
         "skills: python",
         "location: Bengaluru",
@@ -59,3 +59,23 @@ def test_matcher_ranks_more_relevant_jobs_first() -> None:
         match.job.title
         for match in match_jobs(preferences, [less_relevant, more_relevant])
     ] == ["Z job", "A job"]
+
+
+def test_matcher_includes_partial_skill_matches_ranked_by_confidence() -> None:
+    """A single-skill preference should surface every job that needs that skill,
+    not just jobs whose skill list matches exactly — but a job that also
+    requires skills outside the user's preference should rank lower than one
+    that doesn't, since the user is a closer fit for the smaller ask."""
+    preferences = UserPreferences(skills=("python",))
+    close_fit = job(title="Python + SQL role", skills=("Python", "SQL"))
+    broader_ask = job(
+        title="Python + SQL + Java role", skills=("Python", "SQL", "Java")
+    )
+
+    matches = match_jobs(preferences, [broader_ask, close_fit])
+
+    assert [match.job.title for match in matches] == [
+        "Python + SQL role",
+        "Python + SQL + Java role",
+    ]
+    assert matches[0].score > matches[1].score

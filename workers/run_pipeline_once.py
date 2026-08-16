@@ -33,7 +33,9 @@ def main() -> None:
 
     engine, session_factory = create_engine_and_session(database_url)
     try:
-        run_pipeline(session_factory, sources)
+        run_pipeline(
+            session_factory, sources, github_token=os.environ.get("GITHUB_TOKEN")
+        )
     finally:
         engine.dispose()
 

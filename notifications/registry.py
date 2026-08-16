@@ -30,7 +30,10 @@ def _create_email_notifier() -> Notifier:
 
 
 def _create_telegram_notifier() -> Notifier:
-    return TelegramNotifier(bot_token=_require_env("TELEGRAM_BOT_TOKEN"))
+    return TelegramNotifier(
+        bot_token=_require_env("TELEGRAM_BOT_TOKEN"),
+        site_url=os.environ.get("SITE_URL"),
+    )
 
 
 NOTIFIER_FACTORIES: dict[str, Callable[[], Notifier]] = {

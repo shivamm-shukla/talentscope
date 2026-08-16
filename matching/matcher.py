@@ -22,7 +22,13 @@ def match_jobs(
         common_skills = desired_skills & job_skills
         skills_match = not desired_skills or bool(common_skills)
         if common_skills:
-            score += 0.6 * len(common_skills) / len(desired_skills)
+            # Weight by both how much of the user's preference this job covers
+            # (recall) and how much of the job's own requirements are skills the
+            # user actually has (precision) — a job asking for exactly what the
+            # user knows should outrank one that tacks on skills they don't have.
+            recall = len(common_skills) / len(desired_skills)
+            precision = len(common_skills) / len(job_skills)
+            score += 0.6 * recall * precision
             reasons.append("skills: " + ", ".join(sorted(common_skills)))
 
         location_matches = (
