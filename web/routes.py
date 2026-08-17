@@ -9,6 +9,7 @@ from ai.company_brief_prompt import generate_company_brief
 from ai.registry import create_generate_fn, create_qa_engine
 from ai.resume_prompt import generate_resume_content
 from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
+from analysis.outcomes import compute_outcome_stats
 from analysis.resume_builder import build_resume_draft
 from auth.passwords import hash_password, verify_password
 from core.interfaces import QAEngine
@@ -380,6 +381,25 @@ def applications_list():
         assert user is not None
         applications = list_applications_for_user(session, user)
         return jsonify([_application_payload(a) for a in applications])
+
+
+@api.get("/applications/stats")
+@login_required
+def applications_stats():
+    with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
+        applications = list_applications_for_user(session, user)
+        stats = compute_outcome_stats([a.status_history for a in applications])
+        return jsonify(
+            applications_tracked=stats.applications_tracked,
+            applied_count=stats.applied_count,
+            response_count=stats.response_count,
+            response_rate=stats.response_rate,
+            offer_count=stats.offer_count,
+            offer_rate=stats.offer_rate,
+            avg_response_hours=stats.avg_response_hours,
+        )
 
 
 @api.post("/applications")

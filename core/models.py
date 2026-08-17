@@ -131,3 +131,14 @@ class ResumeSection:
 class GeneratedResume:
     content: str
     sections: tuple[ResumeSection, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class OutcomeStats:
+    applications_tracked: int
+    applied_count: int
+    response_count: int
+    response_rate: float
+    offer_count: int
+    offer_rate: float
+    avg_response_hours: float | None = None

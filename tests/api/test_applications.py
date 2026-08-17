@@ -154,3 +154,26 @@ def test_matches_includes_application_status(client) -> None:
     [match] = response.get_json()
     assert match["application_status"] == "applied"
     assert match["job"]["id"] == job_id
+
+
+def test_applications_stats_requires_login(client) -> None:
+    assert client.get("/applications/stats").status_code == 401
+
+
+def test_applications_stats_reflects_tracked_progress(client) -> None:
+    signup(client)
+    job_id = seed_job(client.application)
+    created = client.post(
+        "/applications", json={"job_id": job_id, "status": "applied"}
+    ).get_json()
+    client.patch(f"/applications/{created['id']}", json={"status": "interviewing"})
+
+    response = client.get("/applications/stats")
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["applications_tracked"] == 1
+    assert body["applied_count"] == 1
+    assert body["response_count"] == 1
+    assert body["response_rate"] == 1.0
+    assert body["offer_count"] == 0

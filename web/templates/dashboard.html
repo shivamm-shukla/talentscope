@@ -74,17 +74,22 @@ async function setApplicationStatus(jobId, status, selectEl) {
 }
 
 async function loadTiles() {
-  const [applicationsResult, resumeResult] = await Promise.all([
+  const [applicationsResult, resumeResult, statsResult] = await Promise.all([
     fetchJSON('/applications'),
     fetchJSON('/resume'),
+    fetchJSON('/applications/stats'),
   ]);
   const applications = (applicationsResult && applicationsResult.data) || [];
   const resumes = (resumeResult && resumeResult.data) || [];
+  const stats = (statsResult && statsResult.data) || null;
 
   const activeCount = applications.filter((a) => a.status === 'applied' || a.status === 'interviewing').length;
   const offerCount = applications.filter((a) => a.status === 'offer').length;
   const latestResume = resumes[0];
   const resumeStatus = !latestResume ? 'Not started' : latestResume.is_final ? `Finalized · v${latestResume.version}` : `Draft · v${latestResume.version}`;
+  const responseRateText = stats && stats.applied_count > 0
+    ? `${Math.round(stats.response_rate * 100)}%`
+    : '—';
 
   tilesEl.innerHTML = `
     <article class="card tile">
@@ -94,6 +99,10 @@ async function loadTiles() {
     <article class="card tile">
       <span class="tile-label">Offers</span>
       <span class="tile-value">${offerCount}</span>
+    </article>
+    <article class="card tile">
+      <span class="tile-label">Response rate</span>
+      <span class="tile-value">${responseRateText}</span>
     </article>
     <article class="card tile">
       <span class="tile-label">Resume</span>
