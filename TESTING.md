@@ -42,14 +42,30 @@ against a **fake implementation** of its neighbors instead of the real thing:
 
 ## Fixture strategy
 
-- `tests/fixtures/internshala/*.html` — saved real listing + detail pages, one per
-  distinct page layout worth covering (paginated listing, a listing with no salary
-  shown, a listing with multiple skill tags, etc).
+- `tests/fixtures/internshala/listings.html` — a saved listing page, covering the
+  card layout the scraper's regexes parse.
+- `tests/fixtures/internshala/detail.html` — a saved *detail* page, covering the
+  JobPosting JSON-LD block (`validThrough`) that `sources/internshala.py::parse_deadline`
+  extracts. `InternshalaSource` takes both `fetch_html` and `fetch_detail_html` as
+  injectable callables (same DI pattern), so integration tests substitute both fixtures
+  and never hit the network — including a failure-isolation test where the detail fetch
+  raises for one posting and the rest of the batch is asserted unaffected.
 - `tests/fixtures/remotive/*.json` — saved API responses, including at least one
   malformed/partial response to test the source's error handling.
 - Fixtures are committed to the repo (not generated at test time) so CI never depends on
   live network access, and so a fixture update is a deliberate, reviewable diff when
   Internshala's markup changes.
+
+## Worker-level integration tests
+
+Every `workers/run_*.py` entrypoint has a matching `tests/integration/test_*_worker.py`
+that runs it against a real (SQLite in-memory) session with fake collaborators injected
+— a `FakeNotifier`/`FakeSource`-style stub passed in place of the real network-calling
+dependency, following the same shape as the API layer's fake-`QAEngine` pattern. This is
+how `workers/run_remind.py` is tested: seed an `Application` with a near-term
+`deadline_at`, run it against a fake `Notifier`, assert one reminder is sent and that a
+second run doesn't re-send it (dedup via `reminders_sent`), and that a failed send is
+retried on the next run rather than being silently dropped.
 
 ## CI gate
 

@@ -1,9 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="web/static/assets/logo-dark.svg">
-  <img src="web/static/assets/logo.svg" width="72" height="72" alt="Santa logo">
-</picture>
+<img src="web/static/assets/logo.svg" width="72" height="72" alt="Santa logo">
 
 # Santa
 
@@ -44,8 +41,9 @@ and job discovery. Planned siblings, not yet built:
 
 | Product | What it does | Status |
 |---|---|---|
-| **santa scout** | Internship/job discovery: scrape, classify, match, alert | 🟢 Live |
-| **santa prep** | AI mock-interview trainer | ⚪ Planned |
+| **santa scout** | Internship/job discovery, application tracking, deadline reminders, alerts | 🟢 Live |
+| **santa resume** | AI resume builder from your synced GitHub/LinkedIn/skills | 🟡 In progress |
+| **santa prep** | AI mock-interview trainer, over live video call | ⚪ Planned |
 | **santa desk** | Calendar, email & meeting management agent | ⚪ Planned |
 | **santa vaani** | Voice & call companion (reminders, check-ins) | ⚪ Planned |
 
@@ -75,13 +73,20 @@ The product value is for students; the engineering rigor is for me.
 
 ### For users (CS/BCA students)
 
-- **Web app** (`/`, `/app`) — signup, preferences, and a proactive matches feed, with light/dark theme
+- **Dashboard** (`/`, `/app`) — signup, preferences, and a proactive home feed (matches,
+  application status, resume status, response-rate stats all in one place), with
+  light/dark theme
 - **Daily-curated internship/job feed** scraped from Internshala (Playwright) and Remotive API, filtered to CS/BCA-relevant postings only
 - **Classification** of every posting into listing type (internship/job), work mode (remote/onsite/hybrid), pay type, duration, and target year — so the feed reads like a briefing, not a search-results page
 - **Retention policy** — postings past their estimated application window are never stored or shown
+- **Application tracker** — mark a posting saved/applied/interviewing/offer/rejected/withdrawn right from the feed, with a full status-history and response-rate/offer-rate stats computed from it
+- **Ghost-job / repost detection** — postings that disappear from a scrape and reappear later (kept artificially alive by relisting) get flagged inline, deterministically, no LLM call needed
+- **Deadline reminders** — for Internshala postings, a real application deadline is scraped from the posting's own detail page (not a guess); if you've saved/applied to one, you get a one-time nudge as it approaches. Remotive has no such field, so those postings never claim a deadline
+- **AI company research briefs** — a short, cached-per-company summary generated from that company's own posting text, available per job
+- **AI resume builder** (`/app/resume`, in progress) — drafts a resume from your synced GitHub, LinkedIn, and skills; edit sections, keep every generated version, copy/download the text
 - **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences, ranked by how closely a job's skill demands fit what the user actually knows
-- **GitHub skill sync** — link a GitHub username and santa periodically scans public repos to keep the skills list current; **LinkedIn import** — upload a LinkedIn data export (self-service, no scraping) to pull in positions, education, and skills the same way. Both feed the same skill vocabulary and are stored for a future resume-builder feature to reuse
-- **Natural-language Q&A** (`/app/ask`) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
+- **GitHub skill sync** — link a GitHub username and santa periodically scans public repos to keep the skills list current; **LinkedIn import** — upload a LinkedIn data export (self-service, no scraping) to pull in positions, education, and skills the same way. Both feed the same skill vocabulary and also seed the resume builder
+- **Natural-language Q&A** (a corner entry point next to the theme toggle) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
 
 Not yet exposed: a market-trends dashboard (skill/city/stipend trends) — the
 analysis logic exists in `analysis/trends.py` but no route surfaces it yet.
@@ -187,9 +192,16 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [x] ≥70% coverage (99% on covered modules as of the AI Q&A endpoint)
 - [x] Structured JSON logging
 - [x] Render deployment (code/config ready — see "Deploying" below for the manual account-setup steps)
-- [x] Web UI (landing, signup/login, preferences, matches feed) with light/dark theme
+- [x] Web UI (landing, signup/login, preferences, dashboard) with light/dark theme
 - [x] CS/BCA relevance filter + listing taxonomy (work mode, pay type, duration, target year) at ingestion
 - [x] Expiry-based retention (don't store/list postings past their application window)
+- [x] GitHub skill sync + LinkedIn data-export import
+- [x] AI resume builder (in progress — generation/editing/versioning work, UI still being refined)
+- [x] Application tracker (saved/applied/interviewing/offer/rejected/withdrawn, status history)
+- [x] Response-rate / offer-rate stats over tracked applications
+- [x] Ghost-job / repost detection (deterministic, from a per-scrape-cycle observation log)
+- [x] AI company research briefs, cached per company
+- [x] Real deadline reminders for Internshala postings (scraped from each posting's detail page), one-time nudge via email/Telegram
 
 ### Explicitly out of scope for v1
 
@@ -198,7 +210,7 @@ These are intentional cuts — not forgotten features. Parking lot for v2 in [`B
 - Public open signups (closed cohort during v1)
 - Mobile app
 - Sources beyond Internshala + Remotive
-- Resume matching / application tracking
+- Referral finder (no reliable "who works where" data source exists yet — see [`BACKLOG.md`](./BACKLOG.md))
 - Payments or premium tiers
 - SMS / push notifications
 
