@@ -1,3 +1,18 @@
+// Shared JSON fetch helper: every authenticated page needs the same
+// "redirect to login on 401" handling, previously copy-pasted per template.
+async function fetchJSON(url, options) {
+  const response = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    ...options,
+  });
+  if (response.status === 401) {
+    window.location.href = '/login';
+    return null;
+  }
+  const data = response.status === 204 ? null : await response.json();
+  return { ok: response.ok, status: response.status, data };
+}
+
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
   logoutBtn.addEventListener('click', async () => {

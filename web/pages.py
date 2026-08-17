@@ -32,21 +32,21 @@ def index():
 @pages.get("/signup")
 def signup_page():
     if current_user.is_authenticated:
-        return redirect(url_for("pages.feed"))
+        return redirect(url_for("pages.dashboard"))
     return render_template("signup.html")
 
 
 @pages.get("/login")
 def login_page():
     if current_user.is_authenticated:
-        return redirect(url_for("pages.feed"))
+        return redirect(url_for("pages.dashboard"))
     return render_template("login.html")
 
 
 @pages.get("/app")
 @login_required_page
-def feed():
-    return render_template("feed.html")
+def dashboard():
+    return render_template("dashboard.html")
 
 
 @pages.get("/app/preferences")
@@ -59,3 +59,9 @@ def preferences_page():
 @login_required_page
 def ask_page():
     return render_template("ask.html")
+
+
+@pages.get("/app/resume")
+@login_required_page
+def resume_page():
+    return render_template("resume.html")

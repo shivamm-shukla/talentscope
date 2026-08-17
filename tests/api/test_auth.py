@@ -18,7 +18,7 @@ def client(tmp_path):
     )
     with app.test_client() as test_client:
         yield test_client
-    app.extensions["talentscope_engine"].dispose()
+    app.extensions["santa_engine"].dispose()
 
 
 def signup(client):

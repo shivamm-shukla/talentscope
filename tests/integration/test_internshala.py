@@ -8,14 +8,28 @@ from sources.registry import create_source
 from sources.remotive import RemotiveSource
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "internshala" / "listings.html"
+DETAIL_FIXTURE = Path(__file__).parents[1] / "fixtures" / "internshala" / "detail.html"
 
 
 def fixture_fetcher(_: str) -> str:
     return FIXTURE.read_text()
 
 
+def detail_fixture_fetcher(_: str) -> str:
+    return DETAIL_FIXTURE.read_text()
+
+
+def source(**overrides) -> InternshalaSource:
+    values = {
+        "fetch_html": fixture_fetcher,
+        "fetch_detail_html": detail_fixture_fetcher,
+    }
+    values.update(overrides)
+    return InternshalaSource(**values)
+
+
 def test_internshala_source_normalizes_saved_listing() -> None:
-    jobs = InternshalaSource(fetch_html=fixture_fetcher).fetch()
+    jobs = source().fetch()
 
     assert len(jobs) == 2
     assert jobs[0].title == "Software Development Intern"
@@ -28,9 +42,30 @@ def test_internshala_source_normalizes_saved_listing() -> None:
 
 def test_internshala_source_filters_by_posted_date() -> None:
     since = datetime.now(UTC) - timedelta(days=10)
-    jobs = InternshalaSource(fetch_html=fixture_fetcher).fetch(since=since)
+    jobs = source().fetch(since=since)
 
     assert [job.title for job in jobs] == ["Software Development Intern"]
+
+
+def test_internshala_source_populates_deadline_from_detail_page() -> None:
+    jobs = source().fetch()
+
+    assert jobs[0].deadline_at == datetime(2026, 9, 16, 23, 59, 59, tzinfo=UTC)
+    assert jobs[1].deadline_at == datetime(2026, 9, 16, 23, 59, 59, tzinfo=UTC)
+
+
+def test_internshala_source_isolates_detail_page_failures() -> None:
+    def flaky_detail_fetcher(url: str) -> str:
+        if "456" in url:
+            raise TimeoutError("detail page timed out")
+        return DETAIL_FIXTURE.read_text()
+
+    jobs = source(fetch_detail_html=flaky_detail_fetcher).fetch()
+
+    assert len(jobs) == 2
+    by_title = {job.title: job for job in jobs}
+    assert by_title["Software Development Intern"].deadline_at is not None
+    assert by_title["Data Intern"].deadline_at is None
 
 
 def test_parser_ignores_cards_missing_required_fields() -> None:

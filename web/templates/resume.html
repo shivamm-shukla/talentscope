@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Resume — Santa{% endblock %}
+{% block content %}
+<section class="feed-header">
+  <h1>santa resume</h1>
+  <p class="muted">Built from your synced GitHub, imported LinkedIn, and saved skills — edit anything before you finalize a version.</p>
+</section>
+
+<section class="card auth-card wide">
+  <button type="button" class="btn btn-primary" id="resume-generate">Generate new version</button>
+  <p class="form-error" id="resume-error" hidden></p>
+</section>
+
+<section id="resume-editor" class="card auth-card wide" hidden>
+  <div class="feed-header">
+    <h2 id="resume-version-label"></h2>
+    <span id="resume-status" class="muted"></span>
+  </div>
+  <div id="resume-sections" class="form"></div>
+  <div class="form-actions">
+    <button type="button" class="btn btn-secondary" id="resume-save">Save changes</button>
+    <button type="button" class="btn btn-primary" id="resume-finalize">Finalize this version</button>
+  </div>
+</section>
+
+<section class="card auth-card wide">
+  <h2>Past versions</h2>
+  <div id="resume-history" class="muted">No versions generated yet.</div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const generateBtn = document.getElementById('resume-generate');
+const errorEl = document.getElementById('resume-error');
+const editor = document.getElementById('resume-editor');
+const versionLabel = document.getElementById('resume-version-label');
+const statusEl = document.getElementById('resume-status');
+const sectionsEl = document.getElementById('resume-sections');
+const saveBtn = document.getElementById('resume-save');
+const finalizeBtn = document.getElementById('resume-finalize');
+const historyEl = document.getElementById('resume-history');
+
+let current = null;
+
+function showError(message) {
+  errorEl.textContent = message;
+  errorEl.hidden = false;
+}
+
+function renderEditor(resume) {
+  current = resume;
+  editor.hidden = false;
+  versionLabel.textContent = `Version ${resume.version}`;
+  statusEl.textContent = resume.is_final ? 'Finalized' : 'Draft';
+  finalizeBtn.disabled = resume.is_final;
+  saveBtn.disabled = resume.is_final;
+  sectionsEl.innerHTML = '';
+  for (const [key, section] of Object.entries(resume.sections || {})) {
+    const wrapper = document.createElement('label');
+    wrapper.textContent = section.heading || key;
+    const textarea = document.createElement('textarea');
+    textarea.rows = 4;
+    textarea.dataset.sectionKey = key;
+    textarea.dataset.heading = section.heading || key;
+    textarea.disabled = resume.is_final;
+    textarea.value = (section.bullets || []).join('\n');
+    wrapper.appendChild(textarea);
+    sectionsEl.appendChild(wrapper);
+  }
+}
+
+function renderHistory(versions) {
+  if (!versions.length) {
+    historyEl.textContent = 'No versions generated yet.';
+    return;
+  }
+  historyEl.innerHTML = versions.map((resume) => (
+    `<button type="button" class="btn btn-secondary btn-sm resume-version-btn" data-id="${resume.id}">` +
+    `v${resume.version}${resume.is_final ? ' (final)' : ' (draft)'}</button>`
+  )).join(' ');
+  historyEl.querySelectorAll('.resume-version-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const resume = versions.find((r) => String(r.id) === btn.dataset.id);
+      if (resume) renderEditor(resume);
+    });
+  });
+}
+
+async function loadVersions() {
+  const response = await fetch('/resume');
+  if (response.status === 401) {
+    window.location.href = "{{ url_for('pages.login_page') }}";
+    return;
+  }
+  const versions = await response.json();
+  renderHistory(versions);
+  if (versions.length) renderEditor(versions[0]);
+}
+
+function collectSections() {
+  const sections = {};
+  sectionsEl.querySelectorAll('textarea').forEach((textarea) => {
+    sections[textarea.dataset.sectionKey] = {
+      heading: textarea.dataset.heading,
+      bullets: textarea.value.split('\n').map((line) => line.trim()).filter(Boolean),
+    };
+  });
+  return sections;
+}
+
+generateBtn.addEventListener('click', async () => {
+  errorEl.hidden = true;
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'Generating…';
+  try {
+    const response = await fetch('/resume/generate', { method: 'POST' });
+    const data = await response.json();
+    if (!response.ok) {
+      showError(data.error || 'Could not generate a resume right now.');
+      return;
+    }
+    renderEditor(data);
+    await loadVersions();
+  } catch (error) {
+    showError('Something went wrong. Try again in a moment.');
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generate new version';
+  }
+});
+
+async function saveChanges() {
+  if (!current) return false;
+  errorEl.hidden = true;
+  const response = await fetch(`/resume/${current.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sections: collectSections() }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    showError(data.error || 'Could not save changes.');
+    return false;
+  }
+  renderEditor(data);
+  return true;
+}
+
+saveBtn.addEventListener('click', saveChanges);
+
+finalizeBtn.addEventListener('click', async () => {
+  if (!current) return;
+  if (!(await saveChanges())) return;
+  const response = await fetch(`/resume/${current.id}/finalize`, { method: 'POST' });
+  const data = await response.json();
+  if (!response.ok) {
+    showError(data.error || 'Could not finalize this version.');
+    return;
+  }
+  renderEditor(data);
+  await loadVersions();
+});
+
+loadVersions();
+</script>
+{% endblock %}

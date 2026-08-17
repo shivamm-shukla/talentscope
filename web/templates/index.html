@@ -10,7 +10,7 @@
   </p>
   <div class="hero-actions">
     {% if current_user.is_authenticated %}
-      <a class="btn btn-primary" href="{{ url_for('pages.feed') }}">Go to your feed</a>
+      <a class="btn btn-primary" href="{{ url_for('pages.dashboard') }}">Go to your dashboard</a>
     {% else %}
       <a class="btn btn-primary" href="{{ url_for('pages.signup_page') }}">Get started free</a>
       <a class="btn btn-secondary" href="{{ url_for('pages.login_page') }}">Log in</a>
@@ -22,8 +22,9 @@
   <article class="card product-card is-live">
     <span class="badge">Live</span>
     <h2>santa scout</h2>
-    <p>Internship &amp; job discovery. Scrapes the boards, matches against your
-      skills, location and stipend, and delivers a daily feed — plus alerts by
+    <p>Internship &amp; job discovery, application tracking, and alerts.
+      Scrapes the boards, matches against your skills, location and stipend,
+      and keeps your pipeline organized — with a daily feed and updates by
       email or Telegram.</p>
   </article>
   <article class="card product-card">
@@ -35,8 +36,8 @@
   <article class="card product-card">
     <span class="badge badge-soon">Coming soon</span>
     <h2>santa desk</h2>
-    <p>Calendar, email and meeting management — santa keeps your application
-      pipeline organized so nothing slips.</p>
+    <p>Calendar, email and meeting management — santa schedules your
+      interviews and follow-ups so nothing slips.</p>
   </article>
   <article class="card product-card">
     <span class="badge badge-soon">Coming soon</span>

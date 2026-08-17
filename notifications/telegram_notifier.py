@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable
 from urllib.request import Request, urlopen
 
-from core.models import DeliveryResult, MatchedJob, User
+from core.models import DeadlineReminder, DeliveryResult, MatchedJob, User
 
 TELEGRAM_API_URL = "https://api.telegram.org"
 MAX_DIGEST_ITEMS = 5
@@ -39,6 +39,16 @@ def _format_text(matches: list[MatchedJob], site_url: str | None) -> str:
     return text
 
 
+def _format_reminder_text(reminders: list[DeadlineReminder]) -> str:
+    ordered = sorted(reminders, key=lambda reminder: reminder.deadline_at)
+    lines = [
+        f"- {reminder.job.title} at {reminder.job.company}: "
+        f"apply by {reminder.deadline_at:%d %b} — {reminder.job.link}"
+        for reminder in ordered
+    ]
+    return "Deadlines coming up:\n\n" + "\n".join(lines)
+
+
 class TelegramNotifier:
     """Sends match digests through a Telegram bot's sendMessage endpoint."""
 
@@ -67,13 +77,27 @@ class TelegramNotifier:
                 delivered=False,
                 detail="user has no telegram chat id",
             )
+        return self._post_message(
+            user.telegram_chat_id, _format_text(matches, self._site_url)
+        )
 
-        payload = json.dumps(
-            {
-                "chat_id": user.telegram_chat_id,
-                "text": _format_text(matches, self._site_url),
-            }
-        ).encode("utf-8")
+    def remind(self, user: User, reminders: list[DeadlineReminder]) -> DeliveryResult:
+        if not reminders:
+            return DeliveryResult(
+                channel=self.channel, delivered=False, detail="no reminders to send"
+            )
+        if not user.telegram_chat_id:
+            return DeliveryResult(
+                channel=self.channel,
+                delivered=False,
+                detail="user has no telegram chat id",
+            )
+        return self._post_message(
+            user.telegram_chat_id, _format_reminder_text(reminders)
+        )
+
+    def _post_message(self, chat_id: str, text: str) -> DeliveryResult:
+        payload = json.dumps({"chat_id": chat_id, "text": text}).encode("utf-8")
         url = f"{self._api_url}/bot{self._bot_token}/sendMessage"
 
         try:
@@ -86,7 +110,5 @@ class TelegramNotifier:
             detail = str(response.get("description", "telegram error"))
             return DeliveryResult(channel=self.channel, delivered=False, detail=detail)
         return DeliveryResult(
-            channel=self.channel,
-            delivered=True,
-            detail=f"sent to chat {user.telegram_chat_id}",
+            channel=self.channel, delivered=True, detail=f"sent to chat {chat_id}"
         )

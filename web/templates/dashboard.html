@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Home — Santa{% endblock %}
+{% block content %}
+<section class="feed-header">
+  <h1>Here's what santa found for you</h1>
+  <p class="muted" id="feed-sub">Loading your matches…</p>
+</section>
+
+<section id="dashboard-tiles" class="tiles"></section>
+
+<section id="empty-state" class="card empty-state" hidden>
+  <h2>Nothing matched yet</h2>
+  <p>Santa needs to know what you're looking for. Set your skills, locations and
+    stipend and check back — matches are computed automatically as new postings
+    come in.</p>
+  <a class="btn btn-primary" href="{{ url_for('pages.preferences_page') }}">Set preferences</a>
+</section>
+
+<section id="feed-list" class="feed-list"></section>
+{% endblock %}
+{% block scripts %}
+<script>
+const feedSub = document.getElementById('feed-sub');
+const feedList = document.getElementById('feed-list');
+const emptyState = document.getElementById('empty-state');
+const tilesEl = document.getElementById('dashboard-tiles');
+
+const APPLICATION_STATUSES = ['saved', 'applied', 'interviewing', 'offer', 'rejected', 'withdrawn'];
+const STATUS_LABELS = {
+  saved: 'Saved', applied: 'Applied', interviewing: 'Interviewing',
+  offer: 'Offer', rejected: 'Rejected', withdrawn: 'Withdrawn',
+};
+
+function scoreLabel(score) {
+  if (score >= 80) return 'Strong match';
+  if (score >= 50) return 'Good match';
+  return 'Possible match';
+}
+
+const YEAR_LABELS = { '1st': '1st year', '2nd': '2nd year', '3rd': '3rd year', final: 'Final year', any: 'Any year' };
+const PAY_LABELS = { fixed_stipend: 'Fixed stipend', per_hour: 'Per hour', per_task: 'Per task' };
+const QUALITY_FLAG_LABELS = { reposted: 'Reposted' };
+
+function jobTags(job) {
+  const tags = [];
+  if (job.listing_type) tags.push(job.listing_type === 'internship' ? 'Internship' : 'Job');
+  if (job.work_mode) tags.push(job.work_mode.charAt(0).toUpperCase() + job.work_mode.slice(1));
+  if (job.pay_type) tags.push(PAY_LABELS[job.pay_type] || job.pay_type);
+  if (job.duration_months) tags.push(`${job.duration_months} mo`);
+  if (job.target_year && job.target_year !== 'any') tags.push(YEAR_LABELS[job.target_year] || job.target_year);
+  return tags;
+}
+
+function statusOptions(selected) {
+  return APPLICATION_STATUSES.map((s) => (
+    `<option value="${s}" ${s === selected ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`
+  )).join('');
+}
+
+async function setApplicationStatus(jobId, status, selectEl) {
+  selectEl.disabled = true;
+  const result = await fetchJSON('/applications', {
+    method: 'POST',
+    body: JSON.stringify({ job_id: jobId, status }),
+  });
+  if (result && result.ok && result.data.status !== status) {
+    await fetchJSON(`/applications/${result.data.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+  selectEl.disabled = false;
+  await loadTiles();
+}
+
+async function loadTiles() {
+  const [applicationsResult, resumeResult, statsResult] = await Promise.all([
+    fetchJSON('/applications'),
+    fetchJSON('/resume'),
+    fetchJSON('/applications/stats'),
+  ]);
+  const applications = (applicationsResult && applicationsResult.data) || [];
+  const resumes = (resumeResult && resumeResult.data) || [];
+  const stats = (statsResult && statsResult.data) || null;
+
+  const activeCount = applications.filter((a) => a.status === 'applied' || a.status === 'interviewing').length;
+  const offerCount = applications.filter((a) => a.status === 'offer').length;
+  const latestResume = resumes[0];
+  const resumeStatus = !latestResume ? 'Not started' : latestResume.is_final ? `Finalized · v${latestResume.version}` : `Draft · v${latestResume.version}`;
+  const responseRateText = stats && stats.applied_count > 0
+    ? `${Math.round(stats.response_rate * 100)}%`
+    : '—';
+
+  tilesEl.innerHTML = `
+    <article class="card tile">
+      <span class="tile-label">Applications in progress</span>
+      <span class="tile-value">${activeCount}</span>
+    </article>
+    <article class="card tile">
+      <span class="tile-label">Offers</span>
+      <span class="tile-value">${offerCount}</span>
+    </article>
+    <article class="card tile">
+      <span class="tile-label">Response rate</span>
+      <span class="tile-value">${responseRateText}</span>
+    </article>
+    <article class="card tile">
+      <span class="tile-label">Resume</span>
+      <span class="tile-value tile-value-text">${resumeStatus}</span>
+      <a class="tile-link" href="{{ url_for('pages.resume_page') }}">Open →</a>
+    </article>
+  `;
+}
+
+async function loadFeed() {
+  const result = await fetchJSON('/matches');
+  if (!result) return;
+  const matches = result.data;
+  if (!matches.length) {
+    feedSub.textContent = 'No matches yet.';
+    emptyState.hidden = false;
+    return;
+  }
+  feedSub.textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'}, best first.`;
+  feedList.innerHTML = matches.map((m) => `
+    <article class="card job-card">
+      <div class="job-card-top">
+        <span class="score-pill">${scoreLabel(m.score)}</span>
+        ${(m.job.quality_flags || []).map((f) => `<span class="quality-flag" title="Santa noticed this posting was taken down and relisted">${QUALITY_FLAG_LABELS[f] || f}</span>`).join('')}
+        ${m.job.deadline_at ? `<span class="deadline-badge">Apply by ${new Date(m.job.deadline_at).toLocaleDateString(undefined, {day: 'numeric', month: 'short'})}</span>` : ''}
+      </div>
+      <h3>${m.job.title}</h3>
+      <p class="job-meta">${m.job.company} · ${m.job.location}${m.job.salary_raw ? ' · ' + m.job.salary_raw : ''}</p>
+      ${jobTags(m.job).length ? `<p class="job-tags">${jobTags(m.job).map((t) => `<span class="tag">${t}</span>`).join('')}</p>` : ''}
+      ${m.job.skills && m.job.skills.length ? `<p class="job-skills">${m.job.skills.join(', ')}</p>` : ''}
+      <div class="job-actions">
+        <a class="btn btn-secondary" href="${m.job.link}" target="_blank" rel="noopener">View posting</a>
+        <button type="button" class="btn btn-secondary company-brief-btn" data-job-id="${m.job.id}">Company info</button>
+        <select class="application-status" data-job-id="${m.job.id}">
+          <option value="" ${!m.application_status ? 'selected' : ''} disabled>Track…</option>
+          ${statusOptions(m.application_status)}
+        </select>
+      </div>
+      <p class="company-brief" id="brief-${m.job.id}" hidden></p>
+    </article>
+  `).join('');
+  feedList.querySelectorAll('.application-status').forEach((select) => {
+    select.addEventListener('change', () => {
+      setApplicationStatus(Number(select.dataset.jobId), select.value, select);
+    });
+  });
+  feedList.querySelectorAll('.company-brief-btn').forEach((button) => {
+    button.addEventListener('click', () => loadCompanyBrief(button));
+  });
+}
+
+async function loadCompanyBrief(button) {
+  const jobId = button.dataset.jobId;
+  const briefEl = document.getElementById(`brief-${jobId}`);
+  if (!briefEl.hidden) {
+    briefEl.hidden = true;
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Loading…';
+  const result = await fetchJSON(`/jobs/${jobId}/brief`);
+  button.disabled = false;
+  button.textContent = 'Company info';
+  if (!result || !result.ok) {
+    briefEl.textContent = 'Could not load company info right now.';
+  } else {
+    briefEl.textContent = result.data.content;
+  }
+  briefEl.hidden = false;
+}
+
+loadFeed();
+loadTiles();
+</script>
+{% endblock %}
