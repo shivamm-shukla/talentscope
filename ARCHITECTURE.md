@@ -83,10 +83,22 @@ class Matcher(Protocol):
 class Notifier(Protocol):
     channel: str
     def send(self, user: User, matches: list[MatchedJob]) -> DeliveryResult: ...
+    def remind(self, user: User, reminders: list[DeadlineReminder]) -> DeliveryResult: ...
 
 class QAEngine(Protocol):
     def answer(self, question: str, context: QueryContext) -> Answer: ...
 ```
+
+`Notifier.remind()` was added alongside `send()` — an additive Protocol change, not a
+redesign — when deadline reminders needed a notification that isn't shaped like a fresh
+job match. Both `EmailNotifier`/`TelegramNotifier` implement it by reusing their existing
+connection plumbing (SMTP factory, bot token) with new formatting logic only.
+
+`ai/resume_prompt.py` and `ai/company_brief_prompt.py` don't implement `QAEngine` — they
+call the provider-agnostic `GenerateFn = Callable[[str], str]` from `ai/providers/gemini.py`
+directly (`ai/registry.py::create_generate_fn()`). `QAEngine.answer(question, context)` is
+shaped for question-answering over jobs; resume/brief generation is a fixed-shape document
+from a prompt, not a Q&A turn, so it doesn't fit that Protocol and isn't forced into it.
 
 - `sources/internshala.py` and `sources/remotive.py` each implement `JobSource`.
   `sources/registry.py` maps a config string (`"internshala"`, `"remotive"`) to an
@@ -110,19 +122,42 @@ class QAEngine(Protocol):
 Core tables, replacing the CSV-based storage from the original prototype:
 
 - `jobs` — normalized postings from all sources (`source`, `title`, `company`,
-  `location`, `salary_raw`, `salary_numeric`, `skills`, `link`, `posted_at`, `scraped_at`).
-  Unique constraint on a normalized key (title+company+location+source) for dedup.
+  `location`, `salary_raw`, `salary_numeric`, `skills`, `description`, `link`,
+  `posted_at`, `scraped_at`, taxonomy fields, `expires_at` (synthetic retention
+  estimate), `deadline_at` (real, source-confirmed deadline — Internshala only,
+  always `NULL` for Remotive), `quality_score`/`quality_flags`). Unique constraint on
+  a normalized key (title+company+location+source) for dedup.
 - `users`, `user_preferences` (skills, locations, min stipend, preferred channels)
 - `matches` — which jobs were matched to which user, and when (so re-runs don't
   re-notify for the same job).
 - `notifications_sent` — delivery log per channel, with status (sent/failed), for
   debugging and for future dedup/rate-limiting logic.
-- `action_log` — **created now, unused until Phase C.** Records any automated
+- `applications` — a user's tracked status for a specific job (saved / applied /
+  interviewing / offer / rejected / withdrawn), with an append-only `status_history`
+  JSON log. Response-rate/offer-rate stats (`analysis/outcomes.py`) are pure
+  aggregation over this, not a separate table.
+- `reminders_sent` — dedup record for deadline reminders, keyed on
+  `(application_id, channel)` rather than `match_id` (a reminder isn't a fresh
+  `Match`) — the same shape as `notifications_sent` one level removed.
+- `job_observations` — one row per scrape cycle a job was actually seen in, pruned
+  past 30 days. `analysis/ghost_job.py` reads gaps in this log to flag a posting
+  that disappeared and later reappeared (relisted), rather than trusting a single
+  snapshot.
+- `company_briefs` — cached AI-generated research summary, one per company (keyed
+  case-insensitively), shared across every job posting from that company.
+- `github_profiles`, `linkedin_profiles` — synced/imported skill-profile snapshots,
+  explicitly kept (not fetched live) so the resume builder can reuse them without
+  re-hitting GitHub's API or asking for another LinkedIn export.
+- `resume_documents` — versioned generated resumes (`version`, `content`, `sections`
+  JSON, `is_final`). A version starts as an editable draft and is explicitly
+  finalized; the next generation allocates the next version number rather than
+  overwriting.
+- `action_log` — **created early on, still unused beyond that.** Records any automated
   system-initiated action with a `proposed_at` / `approved_at` / `executed_at` /
-  `status` shape. Nothing writes meaningful rows here in Phase B beyond notification
-  sends (which double as the first "actions" in the log) — but the table exists so
-  Phase C's approval layer has a substrate to build on rather than needing a schema
-  migration plus a retrofit of an audit trail.
+  `status` shape, for Phase C's future approval layer. It was **not** repurposed for
+  the application tracker even though the shapes look adjacent — `action_log` has no
+  `job_id` and is built for a propose→approve→execute workflow, not a directly
+  queryable per-job status, so `applications` was added as its own table instead.
 
 SQLAlchemy + Alembic, Postgres in production / SQLite in tests. Originally planned as
 MySQL, revised when picking a free-forever deployment target: Render's only managed
@@ -137,11 +172,14 @@ times a day), the cost of a queue (Redis/Celery or similar infra to run, monitor
 keep alive) outweighs what it buys. Instead:
 
 - Each pipeline stage is a **separate CLI entrypoint** under `workers/`:
-  `run_scrape.py`, `run_analyze.py`, `run_match.py`, `run_notify.py`. Each is a thin
-  script that wires together a `JobSource` (or several), calls into `analysis/` or
-  `matching/` or `notifications/`, and exits. Each is runnable and testable completely
+  `run_scrape.py`, `run_analyze.py`, `run_github_sync.py`, `run_match.py`,
+  `run_notify.py`, `run_remind.py`. Each is a thin script that wires together a
+  `JobSource` (or several), calls into `analysis/` or `matching/` or
+  `notifications/`, and exits. Each is runnable and testable completely
   independently of the others — `run_notify.py` can be invoked against a fixture DB
-  without ever running a scrape.
+  without ever running a scrape. `run_remind.py` was added last and only reads
+  already-committed `applications`/`jobs` data, so it's appended at the end of the
+  stage order rather than needing to run in lockstep with the others.
 - **APScheduler**, running in-process inside the Flask app (or a tiny separate
   scheduler process — see open question below), triggers these stages in sequence on a
   cron-like schedule. This is orchestration, not business logic — it just shells out to
