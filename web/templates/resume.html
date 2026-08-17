@@ -16,6 +16,23 @@
     <h2 id="resume-version-label"></h2>
     <span id="resume-status" class="muted"></span>
   </div>
+
+  <div id="resume-preview-wrap">
+    <h3>Resume text</h3>
+    <p class="muted">This is what santa generated — copy or download it, then use the sections below to refine what the next version is built from.</p>
+    <pre id="resume-preview" class="resume-preview"></pre>
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary btn-sm" id="resume-copy">Copy text</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="resume-download">Download .txt</button>
+    </div>
+  </div>
+
+  <p id="resume-empty-hint" class="field-hint" hidden>
+    These sections are empty because santa doesn't have much to work with yet —
+    <a href="{{ url_for('pages.preferences_page') }}">sync GitHub, import LinkedIn, or add skills in Preferences</a>,
+    then generate a new version.
+  </p>
+  <h3>Sections</h3>
   <div id="resume-sections" class="form"></div>
   <div class="form-actions">
     <button type="button" class="btn btn-secondary" id="resume-save">Save changes</button>
@@ -35,6 +52,10 @@ const errorEl = document.getElementById('resume-error');
 const editor = document.getElementById('resume-editor');
 const versionLabel = document.getElementById('resume-version-label');
 const statusEl = document.getElementById('resume-status');
+const previewEl = document.getElementById('resume-preview');
+const copyBtn = document.getElementById('resume-copy');
+const downloadBtn = document.getElementById('resume-download');
+const emptyHint = document.getElementById('resume-empty-hint');
 const sectionsEl = document.getElementById('resume-sections');
 const saveBtn = document.getElementById('resume-save');
 const finalizeBtn = document.getElementById('resume-finalize');
@@ -54,7 +75,13 @@ function renderEditor(resume) {
   statusEl.textContent = resume.is_final ? 'Finalized' : 'Draft';
   finalizeBtn.disabled = resume.is_final;
   saveBtn.disabled = resume.is_final;
+  previewEl.textContent = resume.content || '(no text generated)';
+
   sectionsEl.innerHTML = '';
+  const hasAnyBullets = Object.values(resume.sections || {}).some(
+    (section) => (section.bullets || []).length > 0
+  );
+  emptyHint.hidden = hasAnyBullets;
   for (const [key, section] of Object.entries(resume.sections || {})) {
     const wrapper = document.createElement('label');
     wrapper.textContent = section.heading || key;
@@ -68,6 +95,28 @@ function renderEditor(resume) {
     sectionsEl.appendChild(wrapper);
   }
 }
+
+copyBtn.addEventListener('click', async () => {
+  if (!current) return;
+  try {
+    await navigator.clipboard.writeText(current.content || '');
+    copyBtn.textContent = 'Copied!';
+  } catch (error) {
+    copyBtn.textContent = 'Could not copy';
+  }
+  setTimeout(() => { copyBtn.textContent = 'Copy text'; }, 1500);
+});
+
+downloadBtn.addEventListener('click', () => {
+  if (!current) return;
+  const blob = new Blob([current.content || ''], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `resume-v${current.version}.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+});
 
 function renderHistory(versions) {
   if (!versions.length) {
