@@ -15,7 +15,7 @@ def client(tmp_path):
             "SECRET_KEY": "test-secret",
             "DATABASE_URL": f"sqlite+pysqlite:///{tmp_path / 'test.db'}",
             "CREATE_DATABASE": True,
-            "RESUME_GENERATE_FN": fake_generate,
+            "GENERATE_FN": fake_generate,
         }
     )
     with app.test_client() as test_client:

@@ -125,11 +125,13 @@ async function loadFeed() {
       ${m.job.skills && m.job.skills.length ? `<p class="job-skills">${m.job.skills.join(', ')}</p>` : ''}
       <div class="job-actions">
         <a class="btn btn-secondary" href="${m.job.link}" target="_blank" rel="noopener">View posting</a>
+        <button type="button" class="btn btn-secondary company-brief-btn" data-job-id="${m.job.id}">Company info</button>
         <select class="application-status" data-job-id="${m.job.id}">
           <option value="" ${!m.application_status ? 'selected' : ''} disabled>Track…</option>
           ${statusOptions(m.application_status)}
         </select>
       </div>
+      <p class="company-brief" id="brief-${m.job.id}" hidden></p>
     </article>
   `).join('');
   feedList.querySelectorAll('.application-status').forEach((select) => {
@@ -137,6 +139,29 @@ async function loadFeed() {
       setApplicationStatus(Number(select.dataset.jobId), select.value, select);
     });
   });
+  feedList.querySelectorAll('.company-brief-btn').forEach((button) => {
+    button.addEventListener('click', () => loadCompanyBrief(button));
+  });
+}
+
+async function loadCompanyBrief(button) {
+  const jobId = button.dataset.jobId;
+  const briefEl = document.getElementById(`brief-${jobId}`);
+  if (!briefEl.hidden) {
+    briefEl.hidden = true;
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Loading…';
+  const result = await fetchJSON(`/jobs/${jobId}/brief`);
+  button.disabled = false;
+  button.textContent = 'Company info';
+  if (!result || !result.ok) {
+    briefEl.textContent = 'Could not load company info right now.';
+  } else {
+    briefEl.textContent = result.data.content;
+  }
+  briefEl.hidden = false;
 }
 
 loadFeed();

@@ -379,6 +379,15 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
 
 .job-actions { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
 .job-actions .btn { margin-top: 0; }
+.company-brief {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 13px;
+  color: var(--graphite-soft);
+}
+
 .application-status {
   font: inherit;
   font-size: 13px;

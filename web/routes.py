@@ -5,6 +5,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ai.company_brief_prompt import generate_company_brief
 from ai.registry import create_generate_fn, create_qa_engine
 from ai.resume_prompt import generate_resume_content
 from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
@@ -17,6 +18,8 @@ from db.applications import get_or_create as get_or_create_application
 from db.applications import list_for_user as list_applications_for_user
 from db.applications import set_status as set_application_status
 from db.applications import statuses_by_job_id
+from db.company_briefs import get_cached as get_cached_company_brief
+from db.company_briefs import upsert as upsert_company_brief
 from db.linkedin_profiles import upsert_linkedin_profile
 from db.models import (
     APPLICATION_STATUSES,
@@ -59,7 +62,7 @@ def _qa_engine() -> QAEngine:
 
 
 def _generate_fn():
-    override = current_app.config.get("RESUME_GENERATE_FN")
+    override = current_app.config.get("GENERATE_FN")
     if override is not None:
         return override
     if "santa_generate_fn" not in current_app.extensions:
@@ -434,6 +437,35 @@ def applications_update(application_id: int):
             application.notes = notes
         session.commit()
         return jsonify(_application_payload(application))
+
+
+@api.get("/jobs/<int:job_id>/brief")
+@login_required
+def job_brief(job_id: int):
+    with _session() as session:
+        job = session.get(Job, job_id)
+        if job is None:
+            return jsonify(error="job not found"), 404
+
+        cached = get_cached_company_brief(session, job.company)
+        if cached is not None:
+            return jsonify(company=job.company, content=cached.content, cached=True)
+
+        descriptions = [
+            j.description
+            for j in session.scalars(
+                select(Job).where(Job.company == job.company, Job.description != "")
+            ).all()
+        ]
+        try:
+            content = generate_company_brief(_generate_fn(), job.company, descriptions)
+        except Exception:
+            current_app.logger.exception("company brief generation failed")
+            return jsonify(error="unable to generate a brief right now"), 502
+
+        brief = upsert_company_brief(session, job.company, content)
+        session.commit()
+        return jsonify(company=job.company, content=brief.content, cached=False), 201
 
 
 @api.post("/resume/generate")

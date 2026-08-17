@@ -38,6 +38,7 @@ class Job(Base):
     salary_raw: Mapped[str | None] = mapped_column(String(255))
     salary_numeric: Mapped[int | None] = mapped_column(Integer)
     skills: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     link: Mapped[str] = mapped_column(String(2048), nullable=False)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     scraped_at: Mapped[datetime] = mapped_column(
@@ -330,3 +331,21 @@ class JobObservation(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     job: Mapped[Job] = relationship(back_populates="observations")
+
+
+class CompanyBrief(Base):
+    """A cached, generated research summary for a company.
+
+    Keyed on company name (case-insensitively, normalized on write) so
+    every job posting from the same company shares one generated brief
+    instead of re-hitting the LLM per job.
+    """
+
+    __tablename__ = "company_briefs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )

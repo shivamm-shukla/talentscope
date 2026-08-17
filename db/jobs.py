@@ -36,6 +36,7 @@ def upsert_job(
     job.salary_raw = posting.salary_raw
     job.salary_numeric = posting.salary_numeric
     job.skills = list(posting.skills)
+    job.description = posting.description
     job.posted_at = posting.posted_at
     if posting.scraped_at is not None:
         job.scraped_at = posting.scraped_at
