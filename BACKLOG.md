@@ -45,10 +45,33 @@ rebuild:
 - Sources beyond Internshala + Remotive. Note: the module boundary
   (`JobSource` in `core/interfaces.py`) makes adding a source a contained change
   whenever this is picked up — see ARCHITECTURE.md's source-swap example.
-- Resume matching / application tracking.
 - Payments or premium tiers.
 - SMS / push notifications. Same note as sources above — this is a new `Notifier`
   implementation, not a restructure, whenever it's picked up.
+
+## Referral finder — dropped, not deferred
+
+Considered as part of the scout feature roadmap alongside the application tracker,
+ghost-job detection, company briefs, response-rate tracking, and deadline reminders —
+all of which shipped. Referral finder didn't, and isn't parked as "later," because
+there's no usable data source for it today: no followers/connections data exists
+anywhere in this codebase (`integrations/github/client.py` only calls the repos
+endpoint, never `/followers`/`/following`; LinkedIn import never parses a
+Connections.csv), and even with that data, "who works at company X" isn't reliably
+derivable from a public GitHub profile's employer field. Revisit only if a real
+employer-affiliation data source appears — not worth a scoped-down/hedged version in
+the meantime.
+
+## Deadline countdown — resolved (was previously a "needs investigation" item)
+
+Earlier planning flagged that `jobs.expires_at` is a synthetic retention estimate
+(`posted_at + 45/60 days`), not a real deadline, and explicitly held off building a
+countdown against it. That investigation is done: Remotive has no deadline field at
+all (checked live); Internshala's *detail* page does, via a JobPosting JSON-LD
+`validThrough` field (confirmed against 50 live postings — 39 had a parseable
+deadline). Shipped as `jobs.deadline_at` (Internshala-only, always `NULL` for
+Remotive) plus a one-time reminder per tracked application within a 3-day window —
+see ARCHITECTURE.md's data model section.
 
 ## Infrastructure items deferred by design, not oversight
 

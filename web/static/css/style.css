@@ -273,6 +273,11 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
   color: #fff;
 }
 .badge-soon { background: rgba(28, 28, 30, 0.06); color: var(--graphite-soft); }
+.badge-beta { background: rgba(255, 169, 77, 0.18); color: #b4560a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .badge-beta { background: rgba(255, 169, 77, 0.16); color: var(--band-2); }
+}
+:root[data-theme="dark"] .badge-beta { background: rgba(255, 169, 77, 0.16); color: var(--band-2); }
 
 /* =========================================================================
    Auth / preferences forms
@@ -305,6 +310,12 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
   outline: none;
   border-color: var(--band-4);
   box-shadow: 0 0 0 3px rgba(91, 110, 225, 0.15);
+}
+.form input:disabled, .form textarea:disabled {
+  background: var(--paper);
+  color: var(--graphite-soft);
+  cursor: not-allowed;
+  resize: none;
 }
 /* Browser autofill (esp. Chrome) otherwise forces its own text/background
    color, which can render invisible text against a dark theme. */
@@ -386,6 +397,21 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
   background: var(--paper);
   font-size: 13px;
   color: var(--graphite-soft);
+}
+
+.resume-preview {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 20px 22px;
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  margin: 0 0 12px;
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .application-status {
