@@ -127,6 +127,7 @@ async function loadFeed() {
       <div class="job-card-top">
         <span class="score-pill">${scoreLabel(m.score)}</span>
         ${(m.job.quality_flags || []).map((f) => `<span class="quality-flag" title="Santa noticed this posting was taken down and relisted">${QUALITY_FLAG_LABELS[f] || f}</span>`).join('')}
+        ${m.job.deadline_at ? `<span class="deadline-badge">Apply by ${new Date(m.job.deadline_at).toLocaleDateString(undefined, {day: 'numeric', month: 'short'})}</span>` : ''}
       </div>
       <h3>${m.job.title}</h3>
       <p class="job-meta">${m.job.company} · ${m.job.location}${m.job.salary_raw ? ' · ' + m.job.salary_raw : ''}</p>

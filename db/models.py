@@ -50,6 +50,7 @@ class Job(Base):
     duration_months: Mapped[int | None] = mapped_column(Integer)
     target_year: Mapped[str | None] = mapped_column(String(16))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     quality_score: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
     quality_flags: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     matches: Mapped[list[Match]] = relationship(
@@ -311,6 +312,9 @@ class Application(Base):
     )
     user: Mapped[User] = relationship(back_populates="applications")
     job: Mapped[Job] = relationship(back_populates="applications")
+    reminders_sent: Mapped[list[ReminderSent]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
 
 
 class JobObservation(Base):
@@ -349,3 +353,31 @@ class CompanyBrief(Base):
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
+
+
+class ReminderSent(Base):
+    """Dedup record for a deadline reminder sent about a tracked application.
+
+    Keyed on (application_id, channel) rather than reusing NotificationSent
+    (which is keyed on match_id) since a reminder has no Match — it's tied
+    to a user's tracked Application, not a fresh job match.
+    """
+
+    __tablename__ = "reminders_sent"
+    __table_args__ = (
+        UniqueConstraint(
+            "application_id", "channel", name="uq_reminders_application_channel"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
+    )
+    channel: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    detail: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    application: Mapped[Application] = relationship(back_populates="reminders_sent")

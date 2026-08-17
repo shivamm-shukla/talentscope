@@ -127,6 +127,28 @@ def test_scrape_worker_prunes_previously_stored_jobs_that_have_since_expired() -
     assert stored == []
 
 
+def test_scrape_worker_persists_a_real_deadline_when_the_source_provides_one() -> None:
+    engine, session_factory = create_engine_and_session("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    deadline = FIXED_NOW + timedelta(days=20)
+    posting = JobPosting(
+        source="fixture",
+        title="Python Intern",
+        company="Example Co",
+        location="Remote",
+        link="https://example.test/jobs/1",
+        skills=("python",),
+        posted_at=FIXED_NOW,
+        deadline_at=deadline,
+    )
+    with session_factory() as session:
+        run([FakeSource([posting])], session, now=FIXED_NOW)
+        stored = session.query(Job).one()
+
+    engine.dispose()
+    assert stored.deadline_at.replace(tzinfo=None) == deadline.replace(tzinfo=None)
+
+
 def test_scrape_worker_records_one_observation_per_cycle_seen_in() -> None:
     engine, session_factory = create_engine_and_session("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)

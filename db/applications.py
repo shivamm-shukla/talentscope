@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from db.models import APPLICATION_STATUSES, Application, Job, User
+
+REMINDER_WINDOW_DAYS = 3
+REMINDER_ELIGIBLE_STATUSES = ("saved", "applied")
 
 
 def get_or_create(
@@ -71,3 +74,30 @@ def statuses_by_job_id(session: Session, user: User) -> dict[int, str]:
         select(Application).where(Application.user_id == user.id)
     ).all()
     return {application.job_id: application.status for application in rows}
+
+
+def due_for_deadline_reminder(
+    session: Session,
+    now: datetime | None = None,
+    window_days: int = REMINDER_WINDOW_DAYS,
+) -> list[Application]:
+    """Applications still worth a deadline nudge: not yet past "applied"
+    (interviewing/offer/rejected/withdrawn have moved on from "should I
+    apply?"), whose job has a real, source-confirmed deadline (never true
+    for Remotive postings, which don't carry one) falling within
+    *window_days* and not already passed.
+    """
+    now = now or datetime.now(UTC)
+    cutoff = now + timedelta(days=window_days)
+    statement = (
+        select(Application)
+        .join(Application.job)
+        .where(
+            Application.status.in_(REMINDER_ELIGIBLE_STATUSES),
+            Job.deadline_at.is_not(None),
+            Job.deadline_at >= now,
+            Job.deadline_at <= cutoff,
+        )
+        .options(selectinload(Application.job), selectinload(Application.user))
+    )
+    return list(session.scalars(statement).all())

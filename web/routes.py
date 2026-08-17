@@ -337,6 +337,11 @@ def matches():
                         "duration_months": match.job.duration_months,
                         "target_year": match.job.target_year,
                         "quality_flags": match.job.quality_flags,
+                        "deadline_at": (
+                            match.job.deadline_at.isoformat()
+                            if match.job.deadline_at
+                            else None
+                        ),
                     },
                 }
                 for match in rows

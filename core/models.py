@@ -38,6 +38,7 @@ class JobPosting:
     duration_months: int | None = None
     target_year: str | None = None
     expires_at: datetime | None = None
+    deadline_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,3 +143,10 @@ class OutcomeStats:
     offer_count: int
     offer_rate: float
     avg_response_hours: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DeadlineReminder:
+    job: JobPosting
+    deadline_at: datetime
+    application_status: str

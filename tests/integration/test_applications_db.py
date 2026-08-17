@@ -1,6 +1,14 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
-from db.applications import get_or_create, list_for_user, set_status, statuses_by_job_id
+from db.applications import (
+    due_for_deadline_reminder,
+    get_or_create,
+    list_for_user,
+    set_status,
+    statuses_by_job_id,
+)
 from db.models import Base, Job, User
 from db.session import create_engine_and_session
 
@@ -103,3 +111,46 @@ def test_statuses_by_job_id_and_list_for_user() -> None:
         assert statuses_by_job_id(session, user) == {job.id: "applied"}
         assert [a.id for a in list_for_user(session, user)] == [application.id]
     engine.dispose()
+
+
+def test_due_for_deadline_reminder_filters_by_window_status_and_deadline() -> None:
+    engine, session_factory = create_engine_and_session("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with session_factory() as session:
+        user = User(email="student@example.test", password_hash="hash")
+        now = datetime.now(UTC)
+
+        in_window = make_job(
+            title="In window",
+            link="https://internshala.test/1",
+            deadline_at=now + timedelta(days=1),
+        )
+        out_of_window = make_job(
+            title="Out of window",
+            link="https://internshala.test/2",
+            deadline_at=now + timedelta(days=30),
+        )
+        no_deadline = make_job(
+            title="No deadline", link="https://internshala.test/3", deadline_at=None
+        )
+        rejected_but_in_window = make_job(
+            title="Rejected",
+            link="https://internshala.test/4",
+            deadline_at=now + timedelta(days=1),
+        )
+        session.add_all(
+            [user, in_window, out_of_window, no_deadline, rejected_but_in_window]
+        )
+        session.commit()
+
+        get_or_create(session, user, in_window)
+        get_or_create(session, user, out_of_window)
+        get_or_create(session, user, no_deadline)
+        rejected_app = get_or_create(session, user, rejected_but_in_window)
+        set_status(session, rejected_app, "rejected")
+        session.commit()
+
+        due = due_for_deadline_reminder(session, now=now)
+
+    engine.dispose()
+    assert [a.job.title for a in due] == ["In window"]
