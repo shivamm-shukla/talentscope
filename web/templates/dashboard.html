@@ -39,6 +39,7 @@ function scoreLabel(score) {
 
 const YEAR_LABELS = { '1st': '1st year', '2nd': '2nd year', '3rd': '3rd year', final: 'Final year', any: 'Any year' };
 const PAY_LABELS = { fixed_stipend: 'Fixed stipend', per_hour: 'Per hour', per_task: 'Per task' };
+const QUALITY_FLAG_LABELS = { reposted: 'Reposted' };
 
 function jobTags(job) {
   const tags = [];
@@ -116,6 +117,7 @@ async function loadFeed() {
     <article class="card job-card">
       <div class="job-card-top">
         <span class="score-pill">${scoreLabel(m.score)}</span>
+        ${(m.job.quality_flags || []).map((f) => `<span class="quality-flag" title="Santa noticed this posting was taken down and relisted">${QUALITY_FLAG_LABELS[f] || f}</span>`).join('')}
       </div>
       <h3>${m.job.title}</h3>
       <p class="job-meta">${m.job.company} · ${m.job.location}${m.job.salary_raw ? ' · ' + m.job.salary_raw : ''}</p>

@@ -7,18 +7,21 @@ import logging
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from analysis.classify import classify
 from core.interfaces import JobSource
 from core.logging import configure_json_logging
+from db.job_observations import prune_observations_older_than, record_observation
 from db.jobs import prune_expired_jobs, upsert_job
 from db.session import create_engine_and_session
 from sources.registry import create_source
 
 logger = logging.getLogger(__name__)
+
+OBSERVATION_RETENTION_DAYS = 30
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,10 +64,14 @@ def run(
             if classification.expires_at < now:
                 skipped_expired += 1
                 continue
-            _, was_created = upsert_job(session, posting, classification)
+            job, was_created = upsert_job(session, posting, classification)
             created += was_created
+            record_observation(session, job, observed_at=now)
     processed = fetched - skipped_non_cs - skipped_expired
     pruned = prune_expired_jobs(session, now=now)
+    prune_observations_older_than(
+        session, cutoff=now - timedelta(days=OBSERVATION_RETENTION_DAYS)
+    )
     session.commit()
     return ScrapeResult(
         fetched=fetched,

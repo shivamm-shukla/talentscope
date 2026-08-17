@@ -1,6 +1,11 @@
+from datetime import datetime, timedelta, timezone
+
+from db.job_observations import record_observation
 from db.models import Base, Job
 from db.session import create_engine_and_session
 from workers.run_analyze import run
+
+NOW = datetime(2026, 8, 18, tzinfo=timezone.utc)
 
 
 def _job(**overrides) -> Job:
@@ -70,3 +75,45 @@ def test_analyze_worker_leaves_unrecognized_salary_and_skills_untouched() -> Non
     assert result.skills_backfilled == 0
     assert stored.salary_numeric is None
     assert stored.skills == []
+
+
+def test_analyze_worker_scores_and_flags_reposted_jobs() -> None:
+    engine, session_factory = create_engine_and_session("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with session_factory() as session:
+        job = _job()
+        session.add(job)
+        session.commit()
+        record_observation(session, job, observed_at=NOW - timedelta(days=1))
+        record_observation(session, job, observed_at=NOW)
+        session.commit()
+
+        result = run(session)
+        stored = session.query(Job).one()
+
+    engine.dispose()
+
+    assert result.flagged == 1
+    assert stored.quality_flags == ["reposted"]
+    assert stored.quality_score == 60
+
+
+def test_analyze_worker_leaves_consistently_observed_postings_unflagged() -> None:
+    engine, session_factory = create_engine_and_session("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with session_factory() as session:
+        job = _job()
+        session.add(job)
+        session.commit()
+        record_observation(session, job, observed_at=NOW - timedelta(hours=2))
+        record_observation(session, job, observed_at=NOW)
+        session.commit()
+
+        result = run(session)
+        stored = session.query(Job).one()
+
+    engine.dispose()
+
+    assert result.flagged == 0
+    assert stored.quality_flags == []
+    assert stored.quality_score == 100

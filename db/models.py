@@ -49,10 +49,15 @@ class Job(Base):
     duration_months: Mapped[int | None] = mapped_column(Integer)
     target_year: Mapped[str | None] = mapped_column(String(16))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    quality_score: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+    quality_flags: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     matches: Mapped[list[Match]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )
     applications: Mapped[list[Application]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
+    observations: Mapped[list[JobObservation]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )
 
@@ -305,3 +310,23 @@ class Application(Base):
     )
     user: Mapped[User] = relationship(back_populates="applications")
     job: Mapped[Job] = relationship(back_populates="applications")
+
+
+class JobObservation(Base):
+    """One row per scrape cycle a job was actually seen in.
+
+    An append-only log rather than a mutable counter, so ghost-job
+    detection can look at gaps between observations (a posting that
+    vanished for a cycle and reappeared) rather than just a total count.
+    """
+
+    __tablename__ = "job_observations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(
+        ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    job: Mapped[Job] = relationship(back_populates="observations")

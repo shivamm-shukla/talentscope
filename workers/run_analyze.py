@@ -10,9 +10,11 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from analysis.ghost_job import score_job
 from analysis.salary import normalize_monthly_stipend
 from analysis.skill_extractor import extract_skills
 from core.logging import configure_json_logging
+from db.job_observations import observed_at_for_job
 from db.models import Job
 from db.session import create_engine_and_session
 
@@ -24,12 +26,14 @@ class AnalyzeResult:
     jobs_processed: int
     salary_normalized: int
     skills_backfilled: int
+    flagged: int
 
 
 def run(session: Session) -> AnalyzeResult:
-    """Normalize salary and backfill skills for every stored job, then commit."""
+    """Normalize salary, backfill skills, and score posting quality for every
+    stored job, then commit."""
     jobs = list(session.scalars(select(Job)).all())
-    salary_normalized = skills_backfilled = 0
+    salary_normalized = skills_backfilled = flagged = 0
 
     for job in jobs:
         if job.salary_numeric is None and job.salary_raw is not None:
@@ -44,11 +48,18 @@ def run(session: Session) -> AnalyzeResult:
                 job.skills = extracted
                 skills_backfilled += 1
 
+        score, flags = score_job(observed_at=observed_at_for_job(session, job.id))
+        job.quality_score = score
+        job.quality_flags = flags
+        if flags:
+            flagged += 1
+
     session.commit()
     return AnalyzeResult(
         jobs_processed=len(jobs),
         salary_normalized=salary_normalized,
         skills_backfilled=skills_backfilled,
+        flagged=flagged,
     )
 
 
@@ -71,6 +82,7 @@ def main() -> None:
                 "jobs_processed": result.jobs_processed,
                 "salary_normalized": result.salary_normalized,
                 "skills_backfilled": result.skills_backfilled,
+                "flagged": result.flagged,
             },
         )
     finally:

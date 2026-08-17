@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from core.models import JobPosting
+from db.job_observations import observed_at_for_job
 from db.models import Base, Job
 from db.session import create_engine_and_session
 from workers.run_scrape import run
@@ -124,3 +125,18 @@ def test_scrape_worker_prunes_previously_stored_jobs_that_have_since_expired() -
 
     assert result.pruned == 1
     assert stored == []
+
+
+def test_scrape_worker_records_one_observation_per_cycle_seen_in() -> None:
+    engine, session_factory = create_engine_and_session("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with session_factory() as session:
+        run([FakeSource([make_posting()])], session, now=FIXED_NOW)
+        later = FIXED_NOW + timedelta(hours=2)
+        run([FakeSource([make_posting()])], session, now=later)
+        job = session.query(Job).one()
+        timestamps = observed_at_for_job(session, job.id)
+
+    engine.dispose()
+    naive = [t.replace(tzinfo=None) for t in timestamps]
+    assert naive == [FIXED_NOW.replace(tzinfo=None), later.replace(tzinfo=None)]

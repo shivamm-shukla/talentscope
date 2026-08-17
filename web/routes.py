@@ -332,6 +332,7 @@ def matches():
                         "pay_type": match.job.pay_type,
                         "duration_months": match.job.duration_months,
                         "target_year": match.job.target_year,
+                        "quality_flags": match.job.quality_flags,
                     },
                 }
                 for match in rows
