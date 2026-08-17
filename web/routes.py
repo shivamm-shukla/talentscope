@@ -181,7 +181,7 @@ def signup():
         session.add(user)
         session.commit()
         session.refresh(user)
-        login_user(user)
+        login_user(user, remember=True)
         return jsonify(id=user.id, email=user.email), 201
 
 
@@ -197,7 +197,7 @@ def login():
             or not verify_password(password, user.password_hash)
         ):
             return jsonify(error="invalid email or password"), 401
-        login_user(user)
+        login_user(user, remember=True)
         return jsonify(id=user.id, email=user.email)
 
 
