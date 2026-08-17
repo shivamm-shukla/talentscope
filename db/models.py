@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from flask_login import UserMixin
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     ForeignKey,
     Integer,
@@ -37,6 +38,7 @@ class Job(Base):
     salary_raw: Mapped[str | None] = mapped_column(String(255))
     salary_numeric: Mapped[int | None] = mapped_column(Integer)
     skills: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     link: Mapped[str] = mapped_column(String(2048), nullable=False)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     scraped_at: Mapped[datetime] = mapped_column(
@@ -48,7 +50,16 @@ class Job(Base):
     duration_months: Mapped[int | None] = mapped_column(Integer)
     target_year: Mapped[str | None] = mapped_column(String(16))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    quality_score: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+    quality_flags: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     matches: Mapped[list[Match]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
+    applications: Mapped[list[Application]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
+    observations: Mapped[list[JobObservation]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )
 
@@ -81,6 +92,12 @@ class User(UserMixin, Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     actions: Mapped[list[ActionLog]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    resume_documents: Mapped[list[ResumeDocument]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    applications: Mapped[list[Application]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -217,3 +234,150 @@ class ActionLog(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     user: Mapped[User | None] = relationship(back_populates="actions")
+
+
+class ResumeDocument(Base):
+    """A generated resume version for a user.
+
+    Versioned (not overwrite-in-place) so a user can compare/revert past
+    generations. Within a version, ``is_final`` distinguishes an editable
+    draft (fresh off generation, or mid-edit) from a version the user has
+    locked in.
+    """
+
+    __tablename__ = "resume_documents"
+    __table_args__ = (
+        UniqueConstraint("user_id", "version", name="uq_resume_documents_user_version"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    sections: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    is_final: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_snapshot: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    user: Mapped[User] = relationship(back_populates="resume_documents")
+
+
+APPLICATION_STATUSES = (
+    "saved",
+    "applied",
+    "interviewing",
+    "offer",
+    "rejected",
+    "withdrawn",
+)
+
+
+class Application(Base):
+    """A user's tracked application status for a specific job.
+
+    ``status_history`` is an append-only log of past transitions kept
+    inline (rather than a separate history table) since it's small and
+    always read alongside the current status.
+    """
+
+    __tablename__ = "applications"
+    __table_args__ = (
+        UniqueConstraint("user_id", "job_id", name="uq_applications_user_job"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    job_id: Mapped[int] = mapped_column(
+        ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="saved")
+    status_history: Mapped[list[dict]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    user: Mapped[User] = relationship(back_populates="applications")
+    job: Mapped[Job] = relationship(back_populates="applications")
+    reminders_sent: Mapped[list[ReminderSent]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+
+
+class JobObservation(Base):
+    """One row per scrape cycle a job was actually seen in.
+
+    An append-only log rather than a mutable counter, so ghost-job
+    detection can look at gaps between observations (a posting that
+    vanished for a cycle and reappeared) rather than just a total count.
+    """
+
+    __tablename__ = "job_observations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(
+        ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    job: Mapped[Job] = relationship(back_populates="observations")
+
+
+class CompanyBrief(Base):
+    """A cached, generated research summary for a company.
+
+    Keyed on company name (case-insensitively, normalized on write) so
+    every job posting from the same company shares one generated brief
+    instead of re-hitting the LLM per job.
+    """
+
+    __tablename__ = "company_briefs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+
+
+class ReminderSent(Base):
+    """Dedup record for a deadline reminder sent about a tracked application.
+
+    Keyed on (application_id, channel) rather than reusing NotificationSent
+    (which is keyed on match_id) since a reminder has no Match — it's tied
+    to a user's tracked Application, not a fresh job match.
+    """
+
+    __tablename__ = "reminders_sent"
+    __table_args__ = (
+        UniqueConstraint(
+            "application_id", "channel", name="uq_reminders_application_channel"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
+    )
+    channel: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    detail: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    application: Mapped[Application] = relationship(back_populates="reminders_sent")

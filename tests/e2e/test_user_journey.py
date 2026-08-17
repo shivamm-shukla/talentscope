@@ -36,11 +36,11 @@ def live_server(tmp_path) -> Iterator[tuple[Flask, str]]:
     finally:
         server.shutdown()
         thread.join()
-        app.extensions["talentscope_engine"].dispose()
+        app.extensions["santa_engine"].dispose()
 
 
 def seed_match_for(app: Flask, email: str) -> None:
-    session_factory = app.extensions["talentscope_session_factory"]
+    session_factory = app.extensions["santa_session_factory"]
     with session_factory() as session:
         user = session.query(User).filter_by(email=email).one()
         job = Job(

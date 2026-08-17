@@ -8,6 +8,7 @@ from typing import Protocol
 from core.models import (
     Answer,
     DateRange,
+    DeadlineReminder,
     DeliveryResult,
     JobPosting,
     MatchedJob,
@@ -42,6 +43,9 @@ class Notifier(Protocol):
     channel: str
 
     def send(self, user: User, matches: list[MatchedJob]) -> DeliveryResult: ...
+    def remind(
+        self, user: User, reminders: list[DeadlineReminder]
+    ) -> DeliveryResult: ...
 
 
 class QAEngine(Protocol):

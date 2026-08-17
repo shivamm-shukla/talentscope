@@ -186,6 +186,19 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
   cursor: pointer;
 }
 
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  color: var(--graphite-soft);
+  transition: color 0.15s var(--ease), background-color 0.15s var(--ease);
+}
+.icon-link:hover { color: var(--graphite); background: var(--paper); }
+.icon-link svg { width: 18px; height: 18px; }
+
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -275,6 +288,7 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
 .auth-card h1 { font-size: 27px; margin: 0 0 8px; letter-spacing: -0.02em; }
 
 .form { display: flex; flex-direction: column; gap: 16px; margin-top: 26px; text-align: left; }
+.form-actions { display: flex; gap: 12px; margin-top: 20px; }
 .form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
 .form input[type=text], .form input[type=email], .form input[type=password], .form input[type=number], .form textarea {
   font: inherit;
@@ -363,6 +377,43 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
 }
 .job-card .btn { align-self: flex-start; margin-top: 6px; }
 
+.job-actions { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.job-actions .btn { margin-top: 0; }
+.company-brief {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 13px;
+  color: var(--graphite-soft);
+}
+
+.application-status {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--graphite);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+.tile { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; }
+.tile-label { font-size: 13px; color: var(--graphite-soft); font-weight: 600; }
+.tile-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.tile-value-text { font-size: 17px; }
+.tile-link { font-size: 13px; font-weight: 600; color: var(--band-4); text-decoration: none; }
+.tile-link:hover { text-decoration: underline; }
+
+.job-card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
 .score-pill {
   display: inline-block;
   font-size: 12px;
@@ -373,6 +424,35 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
   color: var(--band-4);
   width: fit-content;
 }
+
+.quality-flag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 169, 77, 0.15);
+  color: #b4560a;
+  cursor: help;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .quality-flag { color: var(--band-2); }
+}
+:root[data-theme="dark"] .quality-flag { color: var(--band-2); }
+
+.deadline-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(46, 196, 182, 0.15);
+  color: #1a7d73;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .deadline-badge { color: var(--band-3); }
+}
+:root[data-theme="dark"] .deadline-badge { color: var(--band-3); }
 
 /* =========================================================================
    Footer

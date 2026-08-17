@@ -1,21 +1,29 @@
 """Playwright-backed Internshala adapter, parsed from the listing page's DOM.
 
-Internshala used to embed each posting as JobPosting JSON-LD, but the site no
-longer emits that structured data on either the listing or detail pages —
-only an unrelated FAQPage/BreadcrumbList/ItemList/SoftwareApplication set of
-blocks remains. The listing cards still carry every field we need in plain
-HTML, so we scrape those directly instead.
+The listing page no longer emits JobPosting JSON-LD (only an unrelated
+FAQPage/BreadcrumbList/ItemList/SoftwareApplication set of blocks remains),
+so the listing cards' plain HTML is scraped directly for everything except
+the application deadline. Each posting's *detail* page does still carry a
+JobPosting JSON-LD block with a real `validThrough` deadline (confirmed
+live), and unlike the listing page it's plain server-rendered HTML — no
+Playwright needed — so it's fetched with a second, cheap request per
+posting.
 """
 
 from __future__ import annotations
 
+import dataclasses
+import logging
 import re
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from html import unescape
 from urllib.parse import urljoin
+from urllib.request import Request, urlopen
 
 from core.models import JobPosting
+
+logger = logging.getLogger(__name__)
 
 INTERNSHALA_INTERNSHIPS_URL = "https://internshala.com/internships/"
 INTERNSHALA_BASE_URL = "https://internshala.com"
@@ -37,6 +45,7 @@ _DESCRIPTION_RE = re.compile(
 )
 _POSTED_RE = re.compile(r'class="status-\w+"><i[^>]*></i><span>([^<]*)</span>')
 _RELATIVE_UNIT_RE = re.compile(r"(\d+)\s+(hour|day|week|month)s?\s+ago", re.IGNORECASE)
+_VALID_THROUGH_RE = re.compile(r'"validThrough"\s*:\s*"([^"]+)"')
 
 
 def _plain_text(html: str) -> str:
@@ -92,6 +101,34 @@ def parse_job_postings(document: str, now: datetime | None = None) -> list[JobPo
     return postings
 
 
+def parse_deadline(detail_html: str) -> datetime | None:
+    """Extract the real application deadline from a detail page's JobPosting
+    JSON-LD block (`"validThrough":"2026-09-16 23:59:59"`); None if the
+    field is absent or its value doesn't parse, so a page-structure change
+    degrades to "no confirmed deadline" instead of crashing the scrape."""
+    match = _VALID_THROUGH_RE.search(detail_html)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
+    except ValueError:
+        return None
+
+
+def _fetch_detail_html(url: str) -> str:
+    # Detail pages are plain server-rendered HTML (confirmed live), unlike
+    # the JS-rendered listing page, so a normal GET is enough here.
+    request = Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (compatible; SantaScoutBot/1.0)"}
+    )
+    with urlopen(
+        request, timeout=15
+    ) as response:  # noqa: S310 - fixed host per posting
+        return response.read().decode("utf-8", errors="replace")
+
+
 def _fetch_listing_html(url: str) -> str:
     from playwright.sync_api import sync_playwright
 
@@ -115,15 +152,37 @@ class InternshalaSource:
     def __init__(
         self,
         fetch_html: Callable[[str], str] = _fetch_listing_html,
+        fetch_detail_html: Callable[[str], str] = _fetch_detail_html,
         url: str = INTERNSHALA_INTERNSHIPS_URL,
     ) -> None:
         self._fetch_html = fetch_html
+        self._fetch_detail_html = fetch_detail_html
         self._url = url
 
     def fetch(self, since: datetime | None = None) -> list[JobPosting]:
-        postings = parse_job_postings(self._fetch_html(self._url))
+        postings = [
+            self._with_deadline(job)
+            for job in parse_job_postings(self._fetch_html(self._url))
+        ]
         if since is None:
             return postings
         return [
             job for job in postings if job.posted_at is None or job.posted_at >= since
         ]
+
+    def _with_deadline(self, job: JobPosting) -> JobPosting:
+        """Fetch and parse *job*'s detail page for its real deadline.
+
+        Isolated per posting (mirrors the per-user isolation in
+        workers/run_github_sync.py) so one broken/slow detail page loses
+        only that posting's deadline, not the posting itself or the rest
+        of the batch.
+        """
+        try:
+            deadline = parse_deadline(self._fetch_detail_html(job.link))
+        except Exception:
+            logger.exception(
+                "failed to fetch/parse Internshala detail page %s", job.link
+            )
+            deadline = None
+        return dataclasses.replace(job, deadline_at=deadline)

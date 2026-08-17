@@ -20,7 +20,14 @@ from core.logging import configure_json_logging
 from db.session import create_engine_and_session
 from notifications.registry import create_notifier
 from sources.registry import create_source
-from workers import run_analyze, run_github_sync, run_match, run_notify, run_scrape
+from workers import (
+    run_analyze,
+    run_github_sync,
+    run_match,
+    run_notify,
+    run_remind,
+    run_scrape,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +49,7 @@ def _stages(
         ("github_sync", lambda session: run_github_sync.run(session, github_token)),
         ("match", lambda session: run_match.run(session)),
         ("notify", lambda session: run_notify.run(session, notifier_factory)),
+        ("remind", lambda session: run_remind.run(session, notifier_factory)),
     )
 
 
@@ -51,7 +59,7 @@ def run_pipeline(
     notifier_factory: Callable[[str], Notifier] = create_notifier,
     github_token: str | None = None,
 ) -> None:
-    """Run scrape, analyze, github_sync, match, and notify in sequence.
+    """Run scrape, analyze, github_sync, match, notify, and remind in sequence.
 
     Each stage runs in its own transaction and its own try/except: a failure in
     one stage is logged and skipped rather than aborting the rest of the
@@ -90,7 +98,7 @@ def main() -> None:
             create_notifier,
             os.environ.get("GITHUB_TOKEN"),
         ],
-        id="talentscope-pipeline",
+        id="santa-pipeline",
         max_instances=1,
         coalesce=True,
     )
