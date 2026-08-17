@@ -90,7 +90,7 @@ def main() -> None:
             create_notifier,
             os.environ.get("GITHUB_TOKEN"),
         ],
-        id="talentscope-pipeline",
+        id="santa-pipeline",
         max_instances=1,
         coalesce=True,
     )

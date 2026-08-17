@@ -16,7 +16,7 @@ def client(tmp_path):
     )
     with app.test_client() as test_client:
         yield test_client
-    app.extensions["talentscope_engine"].dispose()
+    app.extensions["santa_engine"].dispose()
 
 
 def signup(client):
@@ -27,7 +27,7 @@ def signup(client):
 
 
 def seed_match(app, *, score=80, reasons=("matches python",)):
-    session_factory = app.extensions["talentscope_session_factory"]
+    session_factory = app.extensions["santa_session_factory"]
     with session_factory() as session:
         user = session.query(User).one()
         job = Job(

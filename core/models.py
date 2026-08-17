@@ -119,3 +119,15 @@ class QueryContext:
 class Answer:
     text: str
     sources: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ResumeSection:
+    heading: str
+    bullets: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedResume:
+    content: str
+    sections: tuple[ResumeSection, ...] = ()

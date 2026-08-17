@@ -7,7 +7,7 @@ from core.logging import JsonFormatter
 
 def _record(**extra: object) -> logging.LogRecord:
     record = logging.LogRecord(
-        name="talentscope.test",
+        name="santa.test",
         level=logging.INFO,
         pathname=__file__,
         lineno=1,
@@ -23,7 +23,7 @@ def _record(**extra: object) -> logging.LogRecord:
 def test_formats_a_plain_record_as_json_with_expected_fields() -> None:
     payload = json.loads(JsonFormatter().format(_record()))
     assert payload["level"] == "INFO"
-    assert payload["logger"] == "talentscope.test"
+    assert payload["logger"] == "santa.test"
     assert payload["message"] == "something happened"
     assert "timestamp" in payload
     assert "extra" not in payload

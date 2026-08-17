@@ -12,11 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from analysis.github_skills import infer_skills, repo_languages
-from analysis.skill_merge import merge_skills
 from core.logging import configure_json_logging
 from core.models import GithubRepo
 from db.github_profiles import upsert_github_profile
-from db.models import User, UserPreference
+from db.models import User
+from db.preferences import merge_inferred_skills_into_preferences
 from db.session import create_engine_and_session
 from integrations.github.client import fetch_public_repos
 
@@ -62,12 +62,8 @@ def run(
             continue
 
         inferred = infer_skills(repos)
-        preference = user.preferences or UserPreference(skills=[])
-        if user.preferences is None:
-            user.preferences = preference
-        existing_skills = preference.skills or []
-        before = len(existing_skills)
-        preference.skills = merge_skills(existing_skills, inferred)
+        before = len(user.preferences.skills) if user.preferences else 0
+        preference = merge_inferred_skills_into_preferences(session, user, inferred)
         skills_added += len(preference.skills) - before
 
         upsert_github_profile(

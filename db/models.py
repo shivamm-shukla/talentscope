@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from flask_login import UserMixin
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     ForeignKey,
     Integer,
@@ -81,6 +82,9 @@ class User(UserMixin, Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     actions: Mapped[list[ActionLog]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    resume_documents: Mapped[list[ResumeDocument]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -217,3 +221,32 @@ class ActionLog(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     user: Mapped[User | None] = relationship(back_populates="actions")
+
+
+class ResumeDocument(Base):
+    """A generated resume version for a user.
+
+    Versioned (not overwrite-in-place) so a user can compare/revert past
+    generations. Within a version, ``is_final`` distinguishes an editable
+    draft (fresh off generation, or mid-edit) from a version the user has
+    locked in.
+    """
+
+    __tablename__ = "resume_documents"
+    __table_args__ = (
+        UniqueConstraint("user_id", "version", name="uq_resume_documents_user_version"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    sections: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    is_final: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_snapshot: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    user: Mapped[User] = relationship(back_populates="resume_documents")

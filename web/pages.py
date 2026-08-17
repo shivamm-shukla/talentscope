@@ -59,3 +59,9 @@ def preferences_page():
 @login_required_page
 def ask_page():
     return render_template("ask.html")
+
+
+@pages.get("/app/resume")
+@login_required_page
+def resume_page():
+    return render_template("resume.html")

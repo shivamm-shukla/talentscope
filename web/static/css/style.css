@@ -275,6 +275,7 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
 .auth-card h1 { font-size: 27px; margin: 0 0 8px; letter-spacing: -0.02em; }
 
 .form { display: flex; flex-direction: column; gap: 16px; margin-top: 26px; text-align: left; }
+.form-actions { display: flex; gap: 12px; margin-top: 20px; }
 .form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
 .form input[type=text], .form input[type=email], .form input[type=password], .form input[type=number], .form textarea {
   font: inherit;

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 
-from ai.providers.gemini import GeminiQAEngine, gemini_generate
+from ai.providers.gemini import GeminiQAEngine, GenerateFn, gemini_generate
 from core.interfaces import QAEngine
 
 DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
@@ -18,10 +18,14 @@ def _require_env(name: str) -> str:
     return value
 
 
-def _create_gemini_engine() -> QAEngine:
+def _gemini_generate_fn() -> GenerateFn:
     api_key = _require_env("GEMINI_API_KEY")
     model = os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-    return GeminiQAEngine(generate=gemini_generate(api_key, model))
+    return gemini_generate(api_key, model)
+
+
+def _create_gemini_engine() -> QAEngine:
+    return GeminiQAEngine(generate=_gemini_generate_fn())
 
 
 QA_ENGINE_FACTORIES: dict[str, Callable[[], QAEngine]] = {
@@ -37,4 +41,22 @@ def create_qa_engine(name: str = "gemini") -> QAEngine:
         supported = ", ".join(sorted(QA_ENGINE_FACTORIES))
         raise ValueError(
             f"Unsupported QA engine {name!r}; choose one of: {supported}"
+        ) from error
+
+
+GENERATE_FN_FACTORIES: dict[str, Callable[[], GenerateFn]] = {
+    "gemini": _gemini_generate_fn,
+}
+
+
+def create_generate_fn(name: str = "gemini") -> GenerateFn:
+    """Create a raw prompt->text function, for products that need LLM text
+    generation without QAEngine's question/job-context shape (e.g. santa
+    resume, future santa prep)."""
+    try:
+        return GENERATE_FN_FACTORIES[name]()
+    except KeyError as error:
+        supported = ", ".join(sorted(GENERATE_FN_FACTORIES))
+        raise ValueError(
+            f"Unsupported generate provider {name!r}; choose one of: {supported}"
         ) from error

@@ -22,9 +22,7 @@ def test_normalize_database_url_forces_psycopg_driver() -> None:
 
 
 def test_normalize_database_url_leaves_other_schemes_untouched() -> None:
-    assert (
-        normalize_database_url("sqlite:///talentscope.db") == "sqlite:///talentscope.db"
-    )
+    assert normalize_database_url("sqlite:///santa.db") == "sqlite:///santa.db"
     assert (
         normalize_database_url("postgresql+psycopg://u:p@host/db")
         == "postgresql+psycopg://u:p@host/db"

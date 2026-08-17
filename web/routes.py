@@ -5,15 +5,31 @@ from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ai.registry import create_qa_engine
+from ai.registry import create_generate_fn, create_qa_engine
+from ai.resume_prompt import generate_resume_content
 from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
-from analysis.skill_merge import merge_skills
+from analysis.resume_builder import build_resume_draft
 from auth.passwords import hash_password, verify_password
 from core.interfaces import QAEngine
 from core.models import JobPosting, QueryContext
 from core.models import User as DomainUser
 from db.linkedin_profiles import upsert_linkedin_profile
-from db.models import GithubProfile, Job, LinkedinProfile, Match, User, UserPreference
+from db.models import (
+    GithubProfile,
+    Job,
+    LinkedinProfile,
+    Match,
+    ResumeDocument,
+    User,
+    UserPreference,
+)
+from db.preferences import merge_inferred_skills_into_preferences
+from db.resume_documents import (
+    create_draft,
+    finalize,
+    list_versions,
+    update_draft_sections,
+)
 from integrations.linkedin.parser import (
     LinkedinExportInvalid,
     LinkedinExportTooLarge,
@@ -24,16 +40,25 @@ api = Blueprint("api", __name__)
 
 
 def _session() -> Session:
-    return current_app.extensions["talentscope_session_factory"]()
+    return current_app.extensions["santa_session_factory"]()
 
 
 def _qa_engine() -> QAEngine:
     override = current_app.config.get("QA_ENGINE")
     if override is not None:
         return override
-    if "talentscope_qa_engine" not in current_app.extensions:
-        current_app.extensions["talentscope_qa_engine"] = create_qa_engine()
-    return current_app.extensions["talentscope_qa_engine"]
+    if "santa_qa_engine" not in current_app.extensions:
+        current_app.extensions["santa_qa_engine"] = create_qa_engine()
+    return current_app.extensions["santa_qa_engine"]
+
+
+def _generate_fn():
+    override = current_app.config.get("RESUME_GENERATE_FN")
+    if override is not None:
+        return override
+    if "santa_generate_fn" not in current_app.extensions:
+        current_app.extensions["santa_generate_fn"] = create_generate_fn()
+    return current_app.extensions["santa_generate_fn"]
 
 
 def _job_posting(job: Job) -> JobPosting:
@@ -103,6 +128,17 @@ def _preference_payload(
         "locations": preferences.locations,
         "minimum_stipend": preferences.minimum_stipend,
         "channels": preferences.preferred_channels,
+    }
+
+
+def _resume_payload(resume: ResumeDocument) -> dict[str, object]:
+    return {
+        "id": resume.id,
+        "version": resume.version,
+        "content": resume.content,
+        "sections": resume.sections,
+        "is_final": resume.is_final,
+        "generated_at": resume.generated_at.isoformat(),
     }
 
 
@@ -231,10 +267,7 @@ def linkedin_import():
     with _session() as session:
         user = session.get(User, current_user.id)
         assert user is not None
-        preference = user.preferences or UserPreference()
-        if user.preferences is None:
-            user.preferences = preference
-        preference.skills = merge_skills(preference.skills or [], inferred)
+        merge_inferred_skills_into_preferences(session, user, inferred)
         profile = upsert_linkedin_profile(session, user, export, inferred)
         session.commit()
         return jsonify(_linkedin_payload(profile))
@@ -302,3 +335,88 @@ def qa():
         current_app.logger.exception("QA engine failed to answer question")
         return jsonify(error="unable to answer question right now"), 502
     return jsonify(text=answer.text, sources=list(answer.sources))
+
+
+@api.post("/resume/generate")
+@login_required
+def resume_generate():
+    with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
+        github = user.github_profile
+        linkedin = user.linkedin_profile
+        skills = list(user.preferences.skills) if user.preferences else []
+        sections = build_resume_draft(
+            skills=skills,
+            headline=linkedin.headline if linkedin else "",
+            positions=linkedin.positions if linkedin else [],
+            education=linkedin.education if linkedin else [],
+            certifications=linkedin.certifications if linkedin else [],
+            languages=github.languages if github else [],
+            repo_count=github.repo_count if github else 0,
+        )
+        try:
+            content = generate_resume_content(
+                _generate_fn(), user.name or user.email, sections
+            )
+        except Exception:
+            current_app.logger.exception("resume generation failed")
+            return jsonify(error="unable to generate resume right now"), 502
+
+        source_snapshot = {
+            "github_synced_at": github.synced_at.isoformat() if github else None,
+            "linkedin_synced_at": linkedin.synced_at.isoformat() if linkedin else None,
+            "skills": skills,
+        }
+        resume = create_draft(session, user, content, sections, source_snapshot)
+        session.commit()
+        session.refresh(resume)
+        return jsonify(_resume_payload(resume)), 201
+
+
+@api.get("/resume")
+@login_required
+def resume_list():
+    with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
+        versions = list_versions(session, user)
+        return jsonify([_resume_payload(resume) for resume in versions])
+
+
+def _owned_resume(session: Session, resume_id: int) -> ResumeDocument | None:
+    resume = session.get(ResumeDocument, resume_id)
+    if resume is None or resume.user_id != current_user.id:
+        return None
+    return resume
+
+
+@api.patch("/resume/<int:resume_id>")
+@login_required
+def resume_edit(resume_id: int):
+    payload = request.get_json(silent=True) or {}
+    sections = payload.get("sections")
+    if not isinstance(sections, dict):
+        return jsonify(error="sections must be an object"), 400
+    with _session() as session:
+        resume = _owned_resume(session, resume_id)
+        if resume is None:
+            return jsonify(error="resume not found"), 404
+        try:
+            update_draft_sections(session, resume, sections)
+        except ValueError as error:
+            return jsonify(error=str(error)), 409
+        session.commit()
+        return jsonify(_resume_payload(resume))
+
+
+@api.post("/resume/<int:resume_id>/finalize")
+@login_required
+def resume_finalize(resume_id: int):
+    with _session() as session:
+        resume = _owned_resume(session, resume_id)
+        if resume is None:
+            return jsonify(error="resume not found"), 404
+        finalize(session, resume)
+        session.commit()
+        return jsonify(_resume_payload(resume))
