@@ -52,6 +52,9 @@ class Job(Base):
     matches: Mapped[list[Match]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )
+    applications: Mapped[list[Application]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
 
 
 class User(UserMixin, Base):
@@ -85,6 +88,9 @@ class User(UserMixin, Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     resume_documents: Mapped[list[ResumeDocument]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    applications: Mapped[list[Application]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -250,3 +256,52 @@ class ResumeDocument(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     user: Mapped[User] = relationship(back_populates="resume_documents")
+
+
+APPLICATION_STATUSES = (
+    "saved",
+    "applied",
+    "interviewing",
+    "offer",
+    "rejected",
+    "withdrawn",
+)
+
+
+class Application(Base):
+    """A user's tracked application status for a specific job.
+
+    ``status_history`` is an append-only log of past transitions kept
+    inline (rather than a separate history table) since it's small and
+    always read alongside the current status.
+    """
+
+    __tablename__ = "applications"
+    __table_args__ = (
+        UniqueConstraint("user_id", "job_id", name="uq_applications_user_job"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    job_id: Mapped[int] = mapped_column(
+        ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="saved")
+    status_history: Mapped[list[dict]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    user: Mapped[User] = relationship(back_populates="applications")
+    job: Mapped[Job] = relationship(back_populates="applications")

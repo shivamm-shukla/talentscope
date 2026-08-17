@@ -33,7 +33,7 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
     body: JSON.stringify(body),
   });
   if (response.ok) {
-    window.location.href = "{{ url_for('pages.feed') }}";
+    window.location.href = "{{ url_for('pages.dashboard') }}";
     return;
   }
   const data = await response.json().catch(() => ({}));

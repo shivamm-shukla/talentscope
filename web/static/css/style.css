@@ -186,6 +186,19 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
   cursor: pointer;
 }
 
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  color: var(--graphite-soft);
+  transition: color 0.15s var(--ease), background-color 0.15s var(--ease);
+}
+.icon-link:hover { color: var(--graphite); background: var(--paper); }
+.icon-link svg { width: 18px; height: 18px; }
+
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -363,6 +376,32 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
   color: var(--graphite-soft);
 }
 .job-card .btn { align-self: flex-start; margin-top: 6px; }
+
+.job-actions { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.job-actions .btn { margin-top: 0; }
+.application-status {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--graphite);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+.tile { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; }
+.tile-label { font-size: 13px; color: var(--graphite-soft); font-weight: 600; }
+.tile-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.tile-value-text { font-size: 17px; }
+.tile-link { font-size: 13px; font-weight: 600; color: var(--band-4); text-decoration: none; }
+.tile-link:hover { text-decoration: underline; }
 
 .score-pill {
   display: inline-block;

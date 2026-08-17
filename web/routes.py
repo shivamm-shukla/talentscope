@@ -13,8 +13,14 @@ from auth.passwords import hash_password, verify_password
 from core.interfaces import QAEngine
 from core.models import JobPosting, QueryContext
 from core.models import User as DomainUser
+from db.applications import get_or_create as get_or_create_application
+from db.applications import list_for_user as list_applications_for_user
+from db.applications import set_status as set_application_status
+from db.applications import statuses_by_job_id
 from db.linkedin_profiles import upsert_linkedin_profile
 from db.models import (
+    APPLICATION_STATUSES,
+    Application,
     GithubProfile,
     Job,
     LinkedinProfile,
@@ -128,6 +134,26 @@ def _preference_payload(
         "locations": preferences.locations,
         "minimum_stipend": preferences.minimum_stipend,
         "channels": preferences.preferred_channels,
+    }
+
+
+def _application_payload(application: Application) -> dict[str, object]:
+    return {
+        "id": application.id,
+        "job_id": application.job_id,
+        "status": application.status,
+        "status_history": application.status_history,
+        "applied_at": (
+            application.applied_at.isoformat() if application.applied_at else None
+        ),
+        "notes": application.notes,
+        "updated_at": application.updated_at.isoformat(),
+        "job": {
+            "title": application.job.title,
+            "company": application.job.company,
+            "location": application.job.location,
+            "link": application.job.link,
+        },
     }
 
 
@@ -277,19 +303,24 @@ def linkedin_import():
 @login_required
 def matches():
     with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
         rows = session.scalars(
             select(Match)
             .where(Match.user_id == current_user.id)
             .join(Match.job)
             .order_by(Match.score.desc())
         ).all()
+        application_status_by_job = statuses_by_job_id(session, user)
         return jsonify(
             [
                 {
                     "score": match.score,
                     "reasons": match.reasons,
                     "matched_at": match.matched_at.isoformat(),
+                    "application_status": application_status_by_job.get(match.job_id),
                     "job": {
+                        "id": match.job.id,
                         "title": match.job.title,
                         "company": match.job.company,
                         "location": match.job.location,
@@ -335,6 +366,73 @@ def qa():
         current_app.logger.exception("QA engine failed to answer question")
         return jsonify(error="unable to answer question right now"), 502
     return jsonify(text=answer.text, sources=list(answer.sources))
+
+
+@api.get("/applications")
+@login_required
+def applications_list():
+    with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
+        applications = list_applications_for_user(session, user)
+        return jsonify([_application_payload(a) for a in applications])
+
+
+@api.post("/applications")
+@login_required
+def applications_create():
+    payload = request.get_json(silent=True) or {}
+    job_id = payload.get("job_id")
+    status = payload.get("status", "saved")
+    if not isinstance(job_id, int):
+        return jsonify(error="job_id is required"), 400
+    if status not in APPLICATION_STATUSES:
+        return (
+            jsonify(error=f"status must be one of {sorted(APPLICATION_STATUSES)}"),
+            400,
+        )
+    with _session() as session:
+        user = session.get(User, current_user.id)
+        assert user is not None
+        job = session.get(Job, job_id)
+        if job is None:
+            return jsonify(error="job not found"), 404
+        application = get_or_create_application(session, user, job, status)
+        session.commit()
+        session.refresh(application)
+        return jsonify(_application_payload(application)), 201
+
+
+def _owned_application(session: Session, application_id: int) -> Application | None:
+    application = session.get(Application, application_id)
+    if application is None or application.user_id != current_user.id:
+        return None
+    return application
+
+
+@api.patch("/applications/<int:application_id>")
+@login_required
+def applications_update(application_id: int):
+    payload = request.get_json(silent=True) or {}
+    status = payload.get("status")
+    notes = payload.get("notes")
+    if status is not None and status not in APPLICATION_STATUSES:
+        return (
+            jsonify(error=f"status must be one of {sorted(APPLICATION_STATUSES)}"),
+            400,
+        )
+    if notes is not None and not isinstance(notes, str):
+        return jsonify(error="notes must be a string"), 400
+    with _session() as session:
+        application = _owned_application(session, application_id)
+        if application is None:
+            return jsonify(error="application not found"), 404
+        if status is not None:
+            set_application_status(session, application, status)
+        if notes is not None:
+            application.notes = notes
+        session.commit()
+        return jsonify(_application_payload(application))
 
 
 @api.post("/resume/generate")
