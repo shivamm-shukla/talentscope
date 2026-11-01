@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from analysis.salary import normalize_monthly_stipend
 from analysis.skill_extractor import extract_skills
-from analysis.trends import compute_trends
+from analysis.trends import compute_trends, stipend_distribution
 from core.models import DateRange, JobPosting
 
 
@@ -59,3 +59,13 @@ def test_trends_count_only_postings_inside_period() -> None:
     assert report.total_jobs == 2
     assert report.skills == {"python": 2, "sql": 1}
     assert report.locations == {"Bengaluru": 1, "Remote": 1}
+
+
+def test_stipend_distribution_buckets_by_lower_bound_inclusive() -> None:
+    assert stipend_distribution([5_000, 10_000, 19_999, 25_000, 50_000, 80_000]) == {
+        "<10k": 1,
+        "10-20k": 2,
+        "20-30k": 1,
+        "30-50k": 0,
+        ">50k": 2,
+    }

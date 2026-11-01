@@ -1,5 +1,8 @@
 """JSON routes for authentication, preference management, and Q&A."""
 
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import select
@@ -11,9 +14,10 @@ from ai.resume_prompt import generate_resume_content
 from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
 from analysis.outcomes import compute_outcome_stats
 from analysis.resume_builder import build_resume_draft
+from analysis.trends import compute_trends, stipend_distribution
 from auth.passwords import hash_password, verify_password
 from core.interfaces import QAEngine
-from core.models import JobPosting, QueryContext
+from core.models import DateRange, JobPosting, QueryContext
 from core.models import User as DomainUser
 from db.applications import get_or_create as get_or_create_application
 from db.applications import list_for_user as list_applications_for_user
@@ -115,6 +119,7 @@ def _linkedin_payload(profile: LinkedinProfile | None) -> dict[str, object] | No
 
 def _preference_payload(
     preferences: UserPreference | None,
+    name: str,
     telegram_chat_id: str | None,
     github_username: str | None,
     github_profile: GithubProfile | None,
@@ -125,6 +130,7 @@ def _preference_payload(
         "locations": [],
         "minimum_stipend": None,
         "channels": [],
+        "name": name,
         "telegram_chat_id": telegram_chat_id,
         "github_username": github_username,
         "github_profile": _github_payload(github_profile),
@@ -176,17 +182,24 @@ def _resume_payload(resume: ResumeDocument) -> dict[str, object]:
 def signup():
     payload = request.get_json(silent=True) or {}
     email, password = payload.get("email"), payload.get("password")
+    name = payload.get("name", "")
     if not isinstance(email, str) or not isinstance(password, str) or len(password) < 8:
         return jsonify(error="email and an 8-character password are required"), 400
+    if not isinstance(name, str):
+        return jsonify(error="name must be a string"), 400
     with _session() as session:
         if session.scalar(select(User).where(User.email == email.casefold())):
             return jsonify(error="email is already registered"), 409
-        user = User(email=email.casefold(), password_hash=hash_password(password))
+        user = User(
+            email=email.casefold(),
+            name=name.strip(),
+            password_hash=hash_password(password),
+        )
         session.add(user)
         session.commit()
         session.refresh(user)
         login_user(user, remember=True)
-        return jsonify(id=user.id, email=user.email), 201
+        return jsonify(id=user.id, email=user.email, name=user.name), 201
 
 
 @api.post("/auth/login")
@@ -202,7 +215,7 @@ def login():
         ):
             return jsonify(error="invalid email or password"), 401
         login_user(user, remember=True)
-        return jsonify(id=user.id, email=user.email)
+        return jsonify(id=user.id, email=user.email, name=user.name)
 
 
 @api.post("/auth/logout")
@@ -215,7 +228,7 @@ def logout():
 @api.get("/auth/me")
 @login_required
 def me():
-    return jsonify(id=current_user.id, email=current_user.email)
+    return jsonify(id=current_user.id, email=current_user.email, name=current_user.name)
 
 
 @api.route("/preferences", methods=["GET", "PUT"])
@@ -228,6 +241,7 @@ def preferences():
             return jsonify(
                 _preference_payload(
                     user.preferences,
+                    user.name,
                     user.telegram_chat_id,
                     user.github_username,
                     user.github_profile,
@@ -257,6 +271,11 @@ def preferences():
                     400,
                 )
             preference.minimum_stipend = value
+        if "name" in payload:
+            value = payload["name"]
+            if not isinstance(value, str):
+                return jsonify(error="name must be a string"), 400
+            user.name = value.strip()
         if "telegram_chat_id" in payload:
             value = payload["telegram_chat_id"]
             if value is not None and not isinstance(value, str):
@@ -271,6 +290,7 @@ def preferences():
         return jsonify(
             _preference_payload(
                 preference,
+                user.name,
                 user.telegram_chat_id,
                 user.github_username,
                 user.github_profile,
@@ -303,6 +323,27 @@ def linkedin_import():
         return jsonify(_linkedin_payload(profile))
 
 
+def _job_card_payload(job: Job) -> dict[str, object]:
+    return {
+        "id": job.id,
+        "title": job.title,
+        "company": job.company,
+        "location": job.location,
+        "link": job.link,
+        "salary_raw": job.salary_raw,
+        "salary_numeric": job.salary_numeric,
+        "skills": job.skills,
+        "listing_type": job.listing_type,
+        "work_mode": job.work_mode,
+        "pay_type": job.pay_type,
+        "duration_months": job.duration_months,
+        "target_year": job.target_year,
+        "quality_flags": job.quality_flags,
+        "posted_at": job.posted_at.isoformat() if job.posted_at else None,
+        "deadline_at": job.deadline_at.isoformat() if job.deadline_at else None,
+    }
+
+
 @api.get("/matches")
 @login_required
 def matches():
@@ -323,28 +364,39 @@ def matches():
                     "reasons": match.reasons,
                     "matched_at": match.matched_at.isoformat(),
                     "application_status": application_status_by_job.get(match.job_id),
-                    "job": {
-                        "id": match.job.id,
-                        "title": match.job.title,
-                        "company": match.job.company,
-                        "location": match.job.location,
-                        "link": match.job.link,
-                        "salary_raw": match.job.salary_raw,
-                        "skills": match.job.skills,
-                        "listing_type": match.job.listing_type,
-                        "work_mode": match.job.work_mode,
-                        "pay_type": match.job.pay_type,
-                        "duration_months": match.job.duration_months,
-                        "target_year": match.job.target_year,
-                        "quality_flags": match.job.quality_flags,
-                        "deadline_at": (
-                            match.job.deadline_at.isoformat()
-                            if match.job.deadline_at
-                            else None
-                        ),
-                    },
+                    "job": _job_card_payload(match.job),
                 }
                 for match in rows
+            ]
+        )
+
+
+JOBS_FEED_LIMIT = 200
+
+
+@api.get("/jobs")
+def jobs_feed():
+    """Every live posting, newest first — public, so a visitor can browse
+    before (or without ever) creating an account. Expired postings are
+    already deleted at scrape time, so nothing here needs an expiry filter."""
+    with _session() as session:
+        rows = session.scalars(
+            select(Job)
+            .order_by(Job.posted_at.desc().nulls_last(), Job.scraped_at.desc())
+            .limit(JOBS_FEED_LIMIT)
+        ).all()
+        status_by_job: dict[int, str] = {}
+        if current_user.is_authenticated:
+            user = session.get(User, current_user.id)
+            assert user is not None
+            status_by_job = statuses_by_job_id(session, user)
+        return jsonify(
+            [
+                {
+                    "application_status": status_by_job.get(job.id),
+                    "job": _job_card_payload(job),
+                }
+                for job in rows
             ]
         )
 
@@ -462,6 +514,89 @@ def applications_update(application_id: int):
             application.notes = notes
         session.commit()
         return jsonify(_application_payload(application))
+
+
+@api.get("/jobs/<int:job_id>")
+def job_detail(job_id: int):
+    with _session() as session:
+        job = session.get(Job, job_id)
+        if job is None:
+            return jsonify(error="job not found"), 404
+        match = application = None
+        if current_user.is_authenticated:
+            match = session.scalar(
+                select(Match).where(
+                    Match.user_id == current_user.id, Match.job_id == job.id
+                )
+            )
+            application = session.scalar(
+                select(Application).where(
+                    Application.user_id == current_user.id,
+                    Application.job_id == job.id,
+                )
+            )
+        return jsonify(
+            **_job_card_payload(job),
+            source=job.source,
+            description=job.description,
+            match=(
+                {"score": match.score, "reasons": match.reasons}
+                if match is not None
+                else None
+            ),
+            application=(
+                {
+                    "id": application.id,
+                    "status": application.status,
+                    "notes": application.notes,
+                }
+                if application is not None
+                else None
+            ),
+        )
+
+
+TREND_PERIODS_DAYS = (30, 90, 180)
+TREND_TOP_N = 8
+
+
+@api.get("/trends")
+def trends():
+    days = request.args.get("days", default=90, type=int)
+    if days not in TREND_PERIODS_DAYS:
+        return jsonify(error=f"days must be one of {list(TREND_PERIODS_DAYS)}"), 400
+    end = datetime.now(UTC)
+    period = DateRange(start=end - timedelta(days=days), end=end)
+    with _session() as session:
+        # Remotive postings can lack posted_at; when Santa first saw them is
+        # the closest honest stand-in for "when this was on the market".
+        postings = [
+            replace(
+                _job_posting(job),
+                posted_at=_as_utc(job.posted_at or job.scraped_at),
+            )
+            for job in session.scalars(select(Job)).all()
+        ]
+    report = compute_trends(postings, period)
+    stipends = [
+        posting.salary_numeric
+        for posting in postings
+        if posting.listing_type == "internship"
+        and posting.salary_numeric
+        and period.start <= posting.posted_at <= period.end
+    ]
+    return jsonify(
+        days=days,
+        total_jobs=report.total_jobs,
+        skills=dict(list(report.skills.items())[:TREND_TOP_N]),
+        locations=dict(list(report.locations.items())[:TREND_TOP_N]),
+        stipends=stipend_distribution(stipends),
+    )
+
+
+def _as_utc(moment: datetime) -> datetime:
+    """SQLite hands back naive datetimes; Postgres hands back aware ones."""
+    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
 
 
 @api.get("/jobs/<int:job_id>/brief")
