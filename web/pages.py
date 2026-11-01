@@ -1,27 +1,17 @@
-"""Server-rendered HTML pages for the Santa web frontend."""
+"""Server-rendered HTML pages for the Santa web frontend.
+
+Every page is reachable without an account: guests browse the feed, open
+postings and see market insights. Pages fetch their data from the JSON API
+and ask for sign-in (an inline modal, see static/js/app.js) only at the
+moment an action needs an account — so no page here redirects to login.
+"""
 
 from __future__ import annotations
-
-from functools import wraps
 
 from flask import Blueprint, redirect, render_template, url_for
 from flask_login import current_user
 
 pages = Blueprint("pages", __name__)
-
-
-def login_required_page(view):
-    """Redirect anonymous visitors to the login page (unlike the JSON API,
-    which returns 401 so `flask_login`'s default unauthorized handler stays
-    untouched for `web.routes`)."""
-
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return redirect(url_for("pages.login_page"))
-        return view(*args, **kwargs)
-
-    return wrapped
 
 
 @pages.get("/")
@@ -43,25 +33,41 @@ def login_page():
     return render_template("login.html")
 
 
+@pages.get("/welcome")
+def welcome():
+    return render_template("welcome.html")
+
+
 @pages.get("/app")
-@login_required_page
 def dashboard():
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", active="home")
+
+
+@pages.get("/app/jobs/<int:job_id>")
+def job_page(job_id: int):
+    return render_template("job.html", active="home", job_id=job_id)
+
+
+@pages.get("/app/applications")
+def applications_page():
+    return render_template("applications.html", active="applications")
+
+
+@pages.get("/app/insights")
+def insights_page():
+    return render_template("insights.html", active="insights")
 
 
 @pages.get("/app/preferences")
-@login_required_page
 def preferences_page():
-    return render_template("preferences.html")
+    return render_template("preferences.html", active="preferences")
 
 
 @pages.get("/app/ask")
-@login_required_page
 def ask_page():
-    return render_template("ask.html")
+    return render_template("ask.html", active="ask")
 
 
 @pages.get("/app/resume")
-@login_required_page
 def resume_page():
-    return render_template("resume.html")
+    return render_template("resume.html", active="resume")

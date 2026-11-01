@@ -1,180 +1,252 @@
-{% extends "base.html" %}
+{% extends "shell.html" %}
 {% block title %}Home — Santa{% endblock %}
 {% block content %}
-<section class="feed-header">
-  <h1>Here's what santa found for you</h1>
-  <p class="muted" id="feed-sub">Loading your matches…</p>
+<section class="greeting-hero">
+  <div>
+    <h1 id="greeting">Hello <span class="wave">👋</span></h1>
+    <p id="greeting-sub">Here's what Santa found for you today.</p>
+    <span class="status-pill"><i></i>On the lookout</span>
+  </div>
 </section>
 
-<section id="dashboard-tiles" class="tiles"></section>
+<section class="notes" id="notes" aria-label="Santa's notes"></section>
 
-<section id="empty-state" class="card empty-state" hidden>
-  <h2>Nothing matched yet</h2>
-  <p>Santa needs to know what you're looking for. Set your skills, locations and
-    stipend and check back — matches are computed automatically as new postings
-    come in.</p>
-  <a class="btn btn-primary" href="{{ url_for('pages.preferences_page') }}">Set preferences</a>
+<section class="tiles" id="tiles" aria-label="At a glance">
+  <div class="skeleton" style="min-height:120px"></div><div class="skeleton" style="min-height:120px"></div>
+  <div class="skeleton" style="min-height:120px"></div><div class="skeleton" style="min-height:120px"></div>
 </section>
 
-<section id="feed-list" class="feed-list"></section>
+<section aria-label="Your feed">
+  <div class="feed-toolbar">
+    <div class="segmented" role="tablist" id="tabs"></div>
+    <div class="filters">
+      <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input class="input" type="search" id="q" placeholder="Search role, company, skill" aria-label="Search jobs"></label>
+      <select class="select select-sm" id="f-type" aria-label="Type"><option value="">Any type</option><option value="internship">Internship</option><option value="job">Job</option></select>
+      <select class="select select-sm" id="f-mode" aria-label="Work mode"><option value="">Any mode</option><option value="remote">Remote</option><option value="hybrid">Hybrid</option><option value="onsite">Onsite</option></select>
+      <select class="select select-sm" id="f-pay" aria-label="Minimum stipend"><option value="">Any stipend</option><option value="10000">₹10k+</option><option value="20000">₹20k+</option><option value="30000">₹30k+</option><option value="50000">₹50k+</option></select>
+      <select class="select select-sm" id="f-sort" aria-label="Sort"><option value="fit">Best fit</option><option value="new">Newest</option><option value="deadline">Closing soon</option></select>
+    </div>
+  </div>
+  <div class="feed-list" id="feed">
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+  <div class="load-more"><button type="button" class="btn btn-secondary" id="more" hidden>Show more</button></div>
+</section>
 {% endblock %}
 {% block scripts %}
 <script>
-const feedSub = document.getElementById('feed-sub');
-const feedList = document.getElementById('feed-list');
-const emptyState = document.getElementById('empty-state');
-const tilesEl = document.getElementById('dashboard-tiles');
+const PAGE = 20;
+const state = { tab: null, shown: PAGE, prefs: emptyPrefs(), all: [], matches: null, applications: [], stats: null, resumes: [] };
+const $ = (id) => document.getElementById(id);
 
-const APPLICATION_STATUSES = ['saved', 'applied', 'interviewing', 'offer', 'rejected', 'withdrawn'];
-const STATUS_LABELS = {
-  saved: 'Saved', applied: 'Applied', interviewing: 'Interviewing',
-  offer: 'Offer', rejected: 'Rejected', withdrawn: 'Withdrawn',
-};
-
-function scoreLabel(score) {
-  if (score >= 80) return 'Strong match';
-  if (score >= 50) return 'Good match';
-  return 'Possible match';
+function greet() {
+  const hour = new Date().getHours();
+  const part = hour < 5 ? 'Up late' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const name = SANTA.name || state.prefs.name;
+  $('greeting').innerHTML = `${part}${name ? ', ' + escapeHTML(name) : ''} <span class="wave">👋</span>`;
 }
 
-const YEAR_LABELS = { '1st': '1st year', '2nd': '2nd year', '3rd': '3rd year', final: 'Final year', any: 'Any year' };
-const PAY_LABELS = { fixed_stipend: 'Fixed stipend', per_hour: 'Per hour', per_task: 'Per task' };
-const QUALITY_FLAG_LABELS = { reposted: 'Reposted' };
-
-function jobTags(job) {
-  const tags = [];
-  if (job.listing_type) tags.push(job.listing_type === 'internship' ? 'Internship' : 'Job');
-  if (job.work_mode) tags.push(job.work_mode.charAt(0).toUpperCase() + job.work_mode.slice(1));
-  if (job.pay_type) tags.push(PAY_LABELS[job.pay_type] || job.pay_type);
-  if (job.duration_months) tags.push(`${job.duration_months} mo`);
-  if (job.target_year && job.target_year !== 'any') tags.push(YEAR_LABELS[job.target_year] || job.target_year);
-  return tags;
+function itemsByJob() {
+  const map = new Map(state.all.map((item) => [item.job.id, item]));
+  (state.matches || []).forEach((m) => map.set(m.job.id, { ...map.get(m.job.id), ...m }));
+  return map;
 }
 
-function statusOptions(selected) {
-  return APPLICATION_STATUSES.map((s) => (
-    `<option value="${s}" ${s === selected ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`
+function forYou() {
+  if (state.matches && state.matches.length) return state.matches;
+  if (!hasPrefs(state.prefs)) return [];
+  return state.all
+    .map((item) => ({ ...item, fit: computeFit(item.job, state.prefs) }))
+    .filter((item) => item.fit.passes)
+    .map((item) => ({ ...item, score: item.fit.score, reasons: null }));
+}
+
+function tabItems(tab) {
+  const merged = [...itemsByJob().values()];
+  if (tab === 'foryou') return forYou();
+  if (tab === 'saved') return merged.filter((i) => i.application_status === 'saved');
+  if (tab === 'applied') return merged.filter((i) => ['applied', 'interviewing', 'offer'].includes(i.application_status));
+  return state.all.map((item) => itemsByJob().get(item.job.id));
+}
+
+function renderTabs() {
+  const tabs = [];
+  if (hasPrefs(state.prefs)) tabs.push(['foryou', 'For you', forYou().length]);
+  tabs.push(['all', 'All jobs', state.all.length]);
+  tabs.push(['saved', 'Saved', SANTA.auth ? tabItems('saved').length : null]);
+  tabs.push(['applied', 'Applied', SANTA.auth ? tabItems('applied').length : null]);
+  if (!state.tab || !tabs.some(([k]) => k === state.tab)) state.tab = tabs[0][0];
+  $('tabs').innerHTML = tabs.map(([key, label, count]) => (
+    `<button type="button" role="tab" data-tab="${key}" aria-selected="${key === state.tab}" class="${key === state.tab ? 'is-on' : ''}">${label}${count != null ? `<span class="count">${count}</span>` : ''}</button>`
   )).join('');
+  $('tabs').querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; state.shown = PAGE; renderTabs(); renderFeed(); }));
 }
 
-async function setApplicationStatus(jobId, status, selectEl) {
-  selectEl.disabled = true;
-  const result = await fetchJSON('/applications', {
-    method: 'POST',
-    body: JSON.stringify({ job_id: jobId, status }),
+function applyFilters(items) {
+  const q = $('q').value.trim().toLowerCase();
+  const type = $('f-type').value;
+  const mode = $('f-mode').value;
+  const pay = Number($('f-pay').value || 0);
+  const sort = $('f-sort').value;
+  let out = items.filter((item) => {
+    const j = item.job;
+    if (type && j.listing_type !== type) return false;
+    if (mode && j.work_mode !== mode) return false;
+    if (pay && !(j.salary_numeric >= pay)) return false;
+    if (q && ![j.title, j.company, j.location, ...(j.skills || [])].join(' ').toLowerCase().includes(q)) return false;
+    return true;
   });
-  if (result && result.ok && result.data.status !== status) {
-    await fetchJSON(`/applications/${result.data.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
+  const ts = (iso) => (iso ? new Date(iso).getTime() : 0);
+  if (sort === 'new') out = [...out].sort((a, b) => ts(b.job.posted_at) - ts(a.job.posted_at));
+  else if (sort === 'deadline') out = [...out].sort((a, b) => (ts(a.job.deadline_at) || Infinity) - (ts(b.job.deadline_at) || Infinity));
+  else if (state.tab !== 'all') out = [...out].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  return out;
+}
+
+function emptyState(tab) {
+  const img = '<img class="mascot" src="/static/assets/santa-icon-192.png" alt="">';
+  if ((tab === 'saved' || tab === 'applied') && !SANTA.auth) {
+    return `<div class="card empty">${img}<h2>Your shortlist lives here</h2><p>Create a free account and every job you save or apply to shows up here — with reminders before deadlines.</p><button type="button" class="btn btn-primary" data-empty-signin>Create free account</button></div>`;
   }
-  selectEl.disabled = false;
-  await loadTiles();
+  if (tab === 'saved') return `<div class="card empty">${img}<h2>Nothing saved yet</h2><p>Tap the bookmark on any job and Santa will keep it here, and nudge you before it closes.</p></div>`;
+  if (tab === 'applied') return `<div class="card empty">${img}<h2>No applications yet</h2><p>Hit Apply on a job you like — Santa will ask if you finished and start tracking replies.</p></div>`;
+  if (!state.all.length) return `<div class="card empty">${img}<h2>Santa is out collecting</h2><p>No live postings right now — new ones come in every couple of hours. Check back soon!</p></div>`;
+  return `<div class="card empty">${img}<h2>Nothing matches these filters</h2><p>Try loosening a filter — or switch to All jobs to see everything.</p><button type="button" class="btn btn-secondary" data-clear>Clear filters</button></div>`;
 }
 
-async function loadTiles() {
-  const [applicationsResult, resumeResult, statsResult] = await Promise.all([
-    fetchJSON('/applications'),
-    fetchJSON('/resume'),
-    fetchJSON('/applications/stats'),
-  ]);
-  const applications = (applicationsResult && applicationsResult.data) || [];
-  const resumes = (resumeResult && resumeResult.data) || [];
-  const stats = (statsResult && statsResult.data) || null;
-
-  const activeCount = applications.filter((a) => a.status === 'applied' || a.status === 'interviewing').length;
-  const offerCount = applications.filter((a) => a.status === 'offer').length;
-  const latestResume = resumes[0];
-  const resumeStatus = !latestResume ? 'Not started' : latestResume.is_final ? `Finalized · v${latestResume.version}` : `Draft · v${latestResume.version}`;
-  const responseRateText = stats && stats.applied_count > 0
-    ? `${Math.round(stats.response_rate * 100)}%`
-    : '—';
-
-  tilesEl.innerHTML = `
-    <article class="card tile">
-      <span class="tile-label">Applications in progress</span>
-      <span class="tile-value">${activeCount}</span>
-    </article>
-    <article class="card tile">
-      <span class="tile-label">Offers</span>
-      <span class="tile-value">${offerCount}</span>
-    </article>
-    <article class="card tile">
-      <span class="tile-label">Response rate</span>
-      <span class="tile-value">${responseRateText}</span>
-    </article>
-    <article class="card tile">
-      <span class="tile-label">Resume</span>
-      <span class="tile-value tile-value-text">${resumeStatus}</span>
-      <a class="tile-link" href="{{ url_for('pages.resume_page') }}">Open →</a>
-    </article>
-  `;
-}
-
-async function loadFeed() {
-  const result = await fetchJSON('/matches');
-  if (!result) return;
-  const matches = result.data;
-  if (!matches.length) {
-    feedSub.textContent = 'No matches yet.';
-    emptyState.hidden = false;
+function renderFeed() {
+  const items = applyFilters(tabItems(state.tab));
+  const feed = $('feed');
+  feed.innerHTML = '';
+  if (!items.length) {
+    feed.innerHTML = emptyState(state.tab);
+    const s = feed.querySelector('[data-empty-signin]');
+    if (s) s.addEventListener('click', () => requireAccount('Create a free account to save jobs and track applications.'));
+    const c = feed.querySelector('[data-clear]');
+    if (c) c.addEventListener('click', () => { ['q', 'f-type', 'f-mode', 'f-pay'].forEach((id) => { $(id).value = ''; }); renderFeed(); });
+    $('more').hidden = true;
     return;
   }
-  feedSub.textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'}, best first.`;
-  feedList.innerHTML = matches.map((m) => `
-    <article class="card job-card">
-      <div class="job-card-top">
-        <span class="score-pill">${scoreLabel(m.score)}</span>
-        ${(m.job.quality_flags || []).map((f) => `<span class="quality-flag" title="Santa noticed this posting was taken down and relisted">${QUALITY_FLAG_LABELS[f] || f}</span>`).join('')}
-        ${m.job.deadline_at ? `<span class="deadline-badge">Apply by ${new Date(m.job.deadline_at).toLocaleDateString(undefined, {day: 'numeric', month: 'short'})}</span>` : ''}
-      </div>
-      <h3>${m.job.title}</h3>
-      <p class="job-meta">${m.job.company} · ${m.job.location}${m.job.salary_raw ? ' · ' + m.job.salary_raw : ''}</p>
-      ${jobTags(m.job).length ? `<p class="job-tags">${jobTags(m.job).map((t) => `<span class="tag">${t}</span>`).join('')}</p>` : ''}
-      ${m.job.skills && m.job.skills.length ? `<p class="job-skills">${m.job.skills.join(', ')}</p>` : ''}
-      <div class="job-actions">
-        <a class="btn btn-secondary" href="${m.job.link}" target="_blank" rel="noopener">View posting</a>
-        <button type="button" class="btn btn-secondary company-brief-btn" data-job-id="${m.job.id}">Company info</button>
-        <select class="application-status" data-job-id="${m.job.id}">
-          <option value="" ${!m.application_status ? 'selected' : ''} disabled>Track…</option>
-          ${statusOptions(m.application_status)}
-        </select>
-      </div>
-      <p class="company-brief" id="brief-${m.job.id}" hidden></p>
-    </article>
-  `).join('');
-  feedList.querySelectorAll('.application-status').forEach((select) => {
-    select.addEventListener('change', () => {
-      setApplicationStatus(Number(select.dataset.jobId), select.value, select);
-    });
-  });
-  feedList.querySelectorAll('.company-brief-btn').forEach((button) => {
-    button.addEventListener('click', () => loadCompanyBrief(button));
-  });
+  items.slice(0, state.shown).forEach((item) => feed.appendChild(renderJobCard(item, state.prefs)));
+  $('more').hidden = items.length <= state.shown;
+  $('more').textContent = `Show more (${items.length - state.shown} left)`;
+  reveal(feed);
 }
 
-async function loadCompanyBrief(button) {
-  const jobId = button.dataset.jobId;
-  const briefEl = document.getElementById(`brief-${jobId}`);
-  if (!briefEl.hidden) {
-    briefEl.hidden = true;
-    return;
-  }
-  button.disabled = true;
-  button.textContent = 'Loading…';
-  const result = await fetchJSON(`/jobs/${jobId}/brief`);
-  button.disabled = false;
-  button.textContent = 'Company info';
-  if (!result || !result.ok) {
-    briefEl.textContent = 'Could not load company info right now.';
+function tile(icon, value, label, sub, href, subClass = '') {
+  const tag = href ? 'a' : 'article';
+  return `<${tag} class="card card-hover tile reveal" ${href ? `href="${href}"` : ''}><span class="tile-icon">${icon}</span><span class="tile-value">${value}</span><span class="tile-label">${label}</span><span class="tile-sub ${subClass}">${sub}</span></${tag}>`;
+}
+
+function renderTiles() {
+  const I = {
+    spark: ICON.sparkle,
+    stack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>',
+    trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4" stroke-linecap="round"/></svg>',
+  };
+  const weekAgo = Date.now() - 7 * 86400000;
+  const closing = state.all.filter((i) => { const d = deadlineInfo(i.job.deadline_at); return d && d.days < 7; }).length;
+  const fresh = state.all.filter((i) => i.job.posted_at && new Date(i.job.posted_at) > weekAgo).length;
+  const html = [];
+  if (hasPrefs(state.prefs)) html.push(tile(I.spark, forYou().length, 'Matches for you', `${fresh} new postings this week`, null, 'up'));
+  else html.push(tile(I.spark, state.all.length, 'Live postings', `${fresh} new this week`, null, 'up'));
+  if (SANTA.auth) {
+    const active = state.applications.filter((a) => !['rejected', 'withdrawn'].includes(a.status)).length;
+    html.push(tile(I.stack, active, 'Applications', 'Tracking for you', '/app/applications'));
+    const rate = state.stats && state.stats.applied_count ? `${Math.round(state.stats.response_rate * 100)}%` : '—';
+    html.push(tile(I.trend, rate, 'Response rate', state.stats && state.stats.applied_count ? `${state.stats.response_count} of ${state.stats.applied_count} replied` : 'Starts once you apply', '/app/applications'));
+    const r = state.resumes[0];
+    html.push(tile(I.shield, r ? `v${r.version}` : '—', 'Resume', r ? (r.is_final ? 'Finalized · looks great' : 'Draft — finish it?') : 'Let Santa draft one', '/app/resume'));
   } else {
-    briefEl.textContent = result.data.content;
+    html.push(tile(I.stack, closing, 'Closing this week', 'Don’t miss these', null));
+    html.push(tile(I.trend, state.all.filter((i) => i.job.work_mode === 'remote').length, 'Remote roles', 'Work from anywhere', null));
+    html.push(tile(I.shield, '—', 'Resume', 'Free AI draft with an account', '/app/resume'));
   }
-  briefEl.hidden = false;
+  $('tiles').innerHTML = html.join('');
+  reveal($('tiles'));
 }
 
-loadFeed();
-loadTiles();
+// ---- Santa's notes: proactive nudges computed from what we already know.
+const DISMISSED_KEY = 'santa-dismissed-notes';
+function note(id, tone, icon, title, body, action) {
+  if ((store(DISMISSED_KEY) || []).includes(id)) return '';
+  return `<div class="note" data-note="${id}"><span class="note-icon ${tone}">${icon}</span><div class="note-body"><strong>${title}</strong><span>${body}</span></div>${action ? `<a class="btn btn-secondary btn-sm" href="${action[1]}" ${action[2] ? 'data-note-signin' : ''}>${action[0]}</a>` : ''}<button type="button" class="note-dismiss" aria-label="Dismiss">×</button></div>`;
+}
+
+function renderNotes() {
+  const notes = [];
+  const items = [...itemsByJob().values()];
+  if (!hasPrefs(state.prefs)) {
+    notes.push(note('personalise', 'accent', ICON.sparkle, 'Showing you every live posting', 'Tell me what you love to build and I’ll sort the best ones to the top.', ['Personalise', '/welcome']));
+  }
+  items.filter((i) => i.application_status === 'saved').forEach((i) => {
+    const d = deadlineInfo(i.job.deadline_at);
+    if (d && d.days < 3) notes.push(note(`deadline-${i.job.id}`, 'warn', ICON.clock, `${escapeHTML(i.job.title)} closes in ${d.text}`, `You saved this at ${escapeHTML(i.job.company)} — want to apply now?`, ['Open', `/app/jobs/${i.job.id}`]));
+  });
+  state.applications.filter((a) => a.status === 'applied' && Date.now() - new Date(a.updated_at) > 7 * 86400000).slice(0, 2).forEach((a) => {
+    const days = Math.floor((Date.now() - new Date(a.updated_at)) / 86400000);
+    notes.push(note(`followup-${a.id}`, 'accent', ICON.clock, `No word from ${escapeHTML(a.job.company)} in ${days} days`, 'A short, polite follow-up often gets things moving.', ['Open tracker', '/app/applications']));
+  });
+  if (hasPrefs(state.prefs) && state.prefs.skills.length) {
+    const counts = {};
+    state.all.forEach((i) => computeFit(i.job, state.prefs).missing.forEach((s) => { counts[s] = (counts[s] || 0) + 1; }));
+    const [skill, n] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || [];
+    if (skill && n >= 3) notes.push(note(`gap-${skill}`, 'good', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>', `Learning ${escapeHTML(skill)} would open up ${n} more postings`, 'It’s the skill most often asked for that isn’t on your list yet.', ['See insights', '/app/insights']));
+  }
+  if (!SANTA.auth && state.all.length) {
+    notes.push(note('guest-account', 'accent', ICON.lock, 'Want me to remember your shortlist?', 'A free account saves jobs, tracks applications and sends alerts. Takes 20 seconds.', ['Create account', '#', true]));
+  }
+  $('notes').innerHTML = notes.slice(0, 3).join('');
+  $('notes').querySelectorAll('.note').forEach((el, i) => {
+    el.style.animationDelay = `${i * 90}ms`;
+    el.querySelector('.note-dismiss').addEventListener('click', () => {
+      store(DISMISSED_KEY, [...(store(DISMISSED_KEY) || []), el.dataset.note]);
+      el.style.transition = 'opacity .3s, transform .3s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(20px)';
+      setTimeout(() => el.remove(), 300);
+    });
+  });
+  $('notes').querySelectorAll('[data-note-signin]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); requireAccount('Create a free account to save jobs, track applications and get alerts.'); }));
+  $('greeting-sub').textContent = hasPrefs(state.prefs)
+    ? `I found ${forYou().length} posting${forYou().length === 1 ? '' : 's'} that fit you.`
+    : `${state.all.length} live postings for CS/BCA students right now.`;
+}
+
+async function load() {
+  state.prefs = await loadPrefs();
+  greet();
+  if (state.prefs.listing_types && state.prefs.listing_types.length === 1 && !$('f-type').value) $('f-type').value = state.prefs.listing_types[0];
+  const requests = [fetchJSON('/jobs')];
+  if (SANTA.auth) requests.push(fetchJSON('/matches'), fetchJSON('/applications'), fetchJSON('/applications/stats'), fetchJSON('/resume'));
+  const [jobs, matches, apps, stats, resumes] = await Promise.all(requests);
+  state.all = (jobs && jobs.ok && jobs.data) || [];
+  state.matches = matches && matches.ok ? matches.data : null;
+  state.applications = (apps && apps.ok && apps.data) || [];
+  state.stats = stats && stats.ok ? stats.data : null;
+  state.resumes = (resumes && resumes.ok && resumes.data) || [];
+  renderTabs();
+  renderTiles();
+  renderNotes();
+  renderFeed();
+}
+
+['q', 'f-type', 'f-mode', 'f-pay', 'f-sort'].forEach((id) => $(id).addEventListener(id === 'q' ? 'input' : 'change', () => { state.shown = PAGE; renderFeed(); }));
+$('more').addEventListener('click', () => { state.shown += PAGE; renderFeed(); });
+window.addEventListener('santa:auth', load);
+window.addEventListener('santa:tracked', async () => {
+  if (!SANTA.auth) return;
+  const [apps, stats] = await Promise.all([fetchJSON('/applications'), fetchJSON('/applications/stats')]);
+  state.applications = (apps.ok && apps.data) || state.applications;
+  state.stats = stats.ok ? stats.data : state.stats;
+  const tracked = new Map(state.applications.map((a) => [a.job_id, a.status]));
+  state.all.forEach((i) => { i.application_status = tracked.get(i.job.id) || null; });
+  (state.matches || []).forEach((m) => { m.application_status = tracked.get(m.job.id) || null; });
+  renderTabs();
+  renderTiles();
+});
+load();
 </script>
 {% endblock %}

@@ -1,55 +1,89 @@
-{% extends "base.html" %}
-{% block title %}Santa — your career, sorted before you ask{% endblock %}
+{% extends "public.html" %}
 {% block content %}
-<section class="hero">
-  <h1>Your career, sorted<br>before you ask.</h1>
-  <p class="hero-sub">
-    Santa is a proactive career companion for CS &amp; BCA students. No searching,
-    no scrolling job boards — santa scout finds the internships and jobs that fit
-    you and puts them in front of you.
-  </p>
-  <div class="hero-actions">
-    {% if current_user.is_authenticated %}
-      <a class="btn btn-primary" href="{{ url_for('pages.dashboard') }}">Go to your dashboard</a>
-    {% else %}
-      <a class="btn btn-primary" href="{{ url_for('pages.signup_page') }}">Get started free</a>
-      <a class="btn btn-secondary" href="{{ url_for('pages.login_page') }}">Log in</a>
-    {% endif %}
+<section class="hero" aria-labelledby="hero-title">
+  <svg class="hero-trail" viewBox="0 0 1200 700" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M-20 520 C 260 460, 420 520, 640 420 S 980 160, 1240 90" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2"/>
+  </svg>
+  <div class="hero-copy">
+    <span class="hero-eyebrow">Meet Santa ✨</span>
+    <h1 id="hero-title">Your career,<br>sorted <span class="grad-text">before you ask.</span></h1>
+    <p>A proactive companion that finds internships and jobs for you, tracks your
+      applications, and nudges you before deadlines — built for Indian CS/BCA students.</p>
+    <div class="hero-actions">
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-primary" href="{{ url_for('pages.dashboard') }}">Open your feed →</a>
+      {% else %}
+        <a class="btn btn-primary" href="{{ url_for('pages.welcome') }}">Get started free →</a>
+        <a class="btn btn-secondary" href="{{ url_for('pages.dashboard') }}">Just browse jobs</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="hero-notif" aria-hidden="true">
+    <img src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="">
+    <div><strong>Santa · just now</strong><span>New match for you — ML Intern at a fintech in Bengaluru · 96% match</span></div>
   </div>
 </section>
 
-<section class="products">
-  <article class="card product-card is-live">
-    <span class="badge">Live</span>
-    <h2>santa scout</h2>
-    <p>Internship &amp; job discovery, application tracking, and alerts.
-      Scrapes the boards, matches against your skills, location and stipend,
-      and keeps your pipeline organized — with a daily feed and updates by
-      email or Telegram.</p>
-  </article>
-  <article class="card product-card">
-    <span class="badge badge-beta">In progress</span>
-    <h2>santa resume</h2>
-    <p>Builds a resume draft from your synced GitHub, LinkedIn and skills —
-      edit it, keep every version, and pick up from where you left off.</p>
-  </article>
-  <article class="card product-card">
-    <span class="badge badge-soon">Coming soon</span>
-    <h2>santa prep</h2>
-    <p>A realistic AI interviewer for mock interviews — build the communication
-      skills that get you past the first round.</p>
-  </article>
-  <article class="card product-card">
-    <span class="badge badge-soon">Coming soon</span>
-    <h2>santa desk</h2>
-    <p>Calendar, email and meeting management — santa schedules your
-      interviews and follow-ups so nothing slips.</p>
-  </article>
-  <article class="card product-card">
-    <span class="badge badge-soon">Coming soon</span>
-    <h2>santa vaani</h2>
-    <p>Your voice &amp; call companion — reminders and check-ins, spoken, not
-      typed.</p>
-  </article>
+<section class="section" aria-labelledby="why-title">
+  <div class="section-head reveal">
+    <h2 id="why-title">Less searching. More <span class="grad-text">doing.</span></h2>
+    <p>Job boards make you hunt. Santa works the other way round — it watches the boards for you and tells you what matters.</p>
+  </div>
+  <div class="grid-3">
+    <article class="card card-hover feature-card reveal">
+      <div class="feature-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg></div>
+      <h3>Finds for you</h3>
+      <p>Fresh CS/BCA internships and jobs from Internshala and Remotive, ranked by how well they fit your skills — expired listings never show up.</p>
+    </article>
+    <article class="card card-hover feature-card reveal">
+      <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg></div>
+      <h3>Guides you</h3>
+      <p>Why a role fits, which skills you're missing, what the company is like, and what the market is asking for right now.</p>
+    </article>
+    <article class="card card-hover feature-card reveal">
+      <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
+      <h3>Grows with you</h3>
+      <p>Tracks every application, reminds you before deadlines, and spots reposted "ghost" listings so you don't waste an evening.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="how-title">
+  <div class="section-head reveal">
+    <h2 id="how-title">Three steps. Then Santa takes over.</h2>
+    <p>Every step is optional — skip anything and you'll still see every live posting.</p>
+  </div>
+  <div class="grid-3 steps-row">
+    <article class="card step-card reveal"><h3>Tell Santa what you love</h3><p class="soft">Pick your skills and cities. Takes 20 seconds.</p></article>
+    <article class="card step-card reveal"><h3>Show your work</h3><p class="soft">Link GitHub or import LinkedIn — Santa learns your skills from what you've built.</p></article>
+    <article class="card step-card reveal"><h3>Stay in the loop</h3><p class="soft">New matches and deadline nudges on Telegram or email. No app to check.</p></article>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="family-title">
+  <div class="section-head reveal">
+    <h2 id="family-title">One companion, a whole crew</h2>
+    <p>Santa Scout is the first. Each one works on its own — and they get better together.</p>
+  </div>
+  <div class="grid-5">
+    <article class="card card-hover product-card reveal"><span class="tag tag-good">Live</span><h3>Santa Scout</h3><p class="soft">Internship &amp; job discovery, tracking and alerts.</p></article>
+    <article class="card card-hover product-card reveal"><span class="tag tag-good">Live</span><h3>Santa Resume</h3><p class="soft">An AI resume drafted from your GitHub, LinkedIn and skills — every version kept.</p></article>
+    <article class="card card-hover product-card reveal"><span class="tag">Coming soon</span><h3>Santa Prep</h3><p class="soft">Mock interviews with a realistic AI interviewer.</p></article>
+    <article class="card card-hover product-card reveal"><span class="tag">Coming soon</span><h3>Santa Desk</h3><p class="soft">Interviews, follow-ups and email, scheduled for you.</p></article>
+    <article class="card card-hover product-card reveal"><span class="tag">Coming soon</span><h3>Santa Vaani</h3><p class="soft">Reminders and check-ins — spoken, not typed.</p></article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="card cta-band reveal">
+    <div class="row">
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-icon-192.png') }}" alt="" width="72" height="72">
+      <div><h2>Ready when you are.</h2><p class="soft">No account needed to look around.</p></div>
+    </div>
+    <div class="hero-actions" style="margin:0">
+      <a class="btn btn-primary" href="{{ url_for('pages.welcome') }}">Get started →</a>
+      <a class="btn btn-secondary" href="{{ url_for('pages.dashboard') }}">Browse jobs</a>
+    </div>
+  </div>
 </section>
 {% endblock %}

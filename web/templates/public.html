@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_icons.html" import theme_toggle %}
+{% block body %}
+<header class="site-header">
+  <a class="brand" href="{{ url_for('pages.index') }}">
+    <img src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="" width="36" height="36">
+    <span>Santa Scout<small>Your career companion</small></span>
+  </a>
+  <nav class="site-nav" aria-label="Main">
+    {{ theme_toggle() }}
+    {% if current_user.is_authenticated %}
+      <a class="btn btn-primary btn-sm" href="{{ url_for('pages.dashboard') }}">Open Santa</a>
+    {% else %}
+      <a class="nav-text" href="{{ url_for('pages.login_page') }}">Log in</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('pages.welcome') }}">Get started</a>
+    {% endif %}
+  </nav>
+</header>
+<main class="{% block main_class %}public-main{% endblock %}">
+  {% block content %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <p>Santa Scout — internships &amp; jobs for CS/BCA students, found before you ask.</p>
+</footer>
+{% endblock %}

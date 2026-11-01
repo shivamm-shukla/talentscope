@@ -588,9 +588,11 @@ def trends():
     return jsonify(
         days=days,
         total_jobs=report.total_jobs,
-        skills=dict(list(report.skills.items())[:TREND_TOP_N]),
-        locations=dict(list(report.locations.items())[:TREND_TOP_N]),
-        stipends=stipend_distribution(stipends),
+        # Ranked [name, count] pairs rather than objects: jsonify sorts object
+        # keys, which would throw away the most-common-first order.
+        skills=list(report.skills.items())[:TREND_TOP_N],
+        locations=list(report.locations.items())[:TREND_TOP_N],
+        stipends=list(stipend_distribution(stipends).items()),
     )
 
 

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="web/static/assets/logo.svg" width="72" height="72" alt="Santa logo">
+<img src="web/static/assets/santa-icon-192.png" width="72" height="72" alt="Santa logo">
 
 # Santa
 

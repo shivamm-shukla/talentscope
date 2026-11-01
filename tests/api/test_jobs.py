@@ -129,10 +129,15 @@ def test_trends_aggregates_recent_postings(client) -> None:
     body = client.get("/trends?days=90").get_json()
 
     assert body["total_jobs"] == 2
-    assert body["skills"] == {"python": 2, "sql": 1}
-    assert body["locations"] == {"Bengaluru": 1, "Pune": 1}
-    assert body["stipends"]["10-20k"] == 1
-    assert body["stipends"]["30-50k"] == 1
+    assert body["skills"] == [["python", 2], ["sql", 1]]
+    assert body["locations"] == [["Bengaluru", 1], ["Pune", 1]]
+    assert body["stipends"] == [
+        ["<10k", 0],
+        ["10-20k", 1],
+        ["20-30k", 0],
+        ["30-50k", 1],
+        [">50k", 0],
+    ]
 
 
 def test_trends_rejects_unsupported_period(client) -> None:

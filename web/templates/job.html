@@ -1,0 +1,153 @@
+{% extends "shell.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Job — Santa{% endblock %}
+{% block body_class %}has-sticky-apply{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('pages.dashboard') }}" id="back">{{ icon('back') }} Back to your feed</a>
+<div id="job-root">
+  <div class="skeleton" style="min-height:180px;margin-bottom:16px"></div>
+  <div class="skeleton" style="min-height:320px"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const JOB_ID = {{ job_id }};
+const root = document.getElementById('job-root');
+let job = null;
+let prefs = emptyPrefs();
+
+if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+  document.getElementById('back').addEventListener('click', (e) => { e.preventDefault(); history.back(); });
+}
+
+function render() {
+  const fit = computeFit(job, prefs);
+  const score = job.match ? job.match.score : fit.score;
+  const reasons = job.match ? job.match.reasons.map(readableReason) : fit.reasons;
+  const status = job.application ? job.application.status : null;
+  const deadline = deadlineInfo(job.deadline_at);
+  const pay = payText(job);
+  document.title = `${job.title} at ${job.company} — Santa`;
+  root.innerHTML = `
+    <section class="card detail-headcard reveal" style="margin-bottom:16px">
+      <div class="detail-head">
+        <div class="avatar" style="${avatarStyle(job.company)}">${escapeHTML(initialOf(job.company))}</div>
+        <div class="grow">
+          <h1>${escapeHTML(job.title)}</h1>
+          <p class="soft" style="margin-top:4px">${escapeHTML(job.company)} · ${escapeHTML(job.location)}${job.posted_at ? ` · posted ${timeAgo(job.posted_at)}` : ''}</p>
+          <div class="job-meta-row" style="margin-top:12px">
+            ${pay ? `<span class="job-pay">${escapeHTML(pay)}</span>` : ''}
+            ${jobTags(job).map(([tone, t]) => `<span class="tag ${tone ? 'tag-' + tone : ''}">${escapeHTML(t)}</span>`).join('')}
+            ${(job.quality_flags || []).includes('reposted') ? `<span class="tag tag-warn">${ICON.alert} Repost detected</span>` : ''}
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button type="button" class="icon-btn ${status ? 'is-on' : ''}" data-act="save" aria-label="Save" title="${status ? STATUS_META[status].label : 'Save for later'}">${ICON.bookmark}</button>
+          <button type="button" class="icon-btn" data-act="share" aria-label="Share">${ICON.share}</button>
+          <button type="button" class="btn btn-primary apply-desktop" data-act="apply">Apply on ${escapeHTML(job.source === 'remotive' ? 'Remotive' : 'Internshala')} ${ICON.external}</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="detail-grid">
+      <section class="card reveal">
+        <div class="tabs-line" role="tablist">
+          <button type="button" role="tab" class="is-on" data-tab="overview">Overview</button>
+          <button type="button" role="tab" data-tab="match">Match analysis</button>
+          <button type="button" role="tab" data-tab="company">Company (AI)</button>
+        </div>
+        <div class="tab-panel" data-panel="overview">
+          <h3>About the role</h3>
+          <p class="prose" style="margin-top:8px">${job.description ? escapeHTML(job.description) : 'The posting didn’t include a description — open it on the source site for the full details.'}</p>
+          ${(job.skills || []).length ? `<h3 style="margin-top:22px">Skills they ask for</h3><div class="chips" style="margin-top:10px">${job.skills.map((s) => `<span class="tag ${fit.matched.includes(norm(s)) ? 'tag-good' : ''}">${fit.matched.includes(norm(s)) ? ICON.check : ''}${escapeHTML(s)}</span>`).join('')}</div>` : ''}
+        </div>
+        <div class="tab-panel" data-panel="match" hidden>
+          ${hasPrefs(prefs) ? `
+            <h3>Your skill fit</h3>
+            <p class="soft small" style="margin-top:4px">${reasons.length ? reasons.join(' · ') : 'Compared with the skills in your preferences.'}</p>
+            <div class="fit-grid">
+              <div class="fit-col have"><h4>You have (${fit.matched.length})</h4><ul>${fit.matched.map((s) => `<li>${ICON.check}${escapeHTML(s)}</li>`).join('') || '<li class="muted">None of the listed skills yet</li>'}</ul></div>
+              <div class="fit-col build"><h4>To build (${fit.missing.length})</h4><ul>${fit.missing.map((s) => `<li>${ICON.circle}${escapeHTML(s)}</li>`).join('') || '<li>Nothing — you cover it all 🎉</li>'}</ul></div>
+            </div>
+            ${fit.missing.length ? `<p class="soft small" style="margin-top:14px">Tip: if you've used ${escapeHTML(fit.missing[0])} even in a small project, mention it — and add it in <a href="/app/preferences">Preferences</a> so Santa can match better.</p>` : ''}`
+          : `<div class="empty" style="padding:24px 0"><h3>Tell Santa your skills</h3><p>Then this tab shows exactly what you already have and what to brush up on.</p><a class="btn btn-secondary" href="/welcome">Add my skills</a></div>`}
+        </div>
+        <div class="tab-panel" data-panel="company" hidden>
+          <div class="brief-card"><h3>${ICON.sparkle} Santa's brief on ${escapeHTML(job.company)}</h3>
+            <p class="prose" id="brief-text">A short read on the company, written from its own postings.</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="brief-btn" style="margin-top:12px">Read it for me</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="detail-aside">
+        <div class="card reveal">
+          ${deadline ? `<p class="small soft">Apply by</p><p class="countdown ${deadline.urgent ? '' : 'calm'}">${deadline.text}</p><p class="small muted">${new Date(job.deadline_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>`
+          : `<p class="small soft">Apply by</p><p class="countdown calm" style="font-size:1.1rem">No deadline listed</p><p class="small muted">Postings like this tend to fill fast — sooner is better.</p>`}
+        </div>
+        ${score != null && score > 0 ? `<div class="card reveal"><div class="score-big"><span class="soft small">Match score</span><strong>${score}%</strong></div><div class="progress"><i data-w="${score}"></i></div></div>` : ''}
+        <div class="card reveal" id="track-card"></div>
+      </aside>
+    </div>
+    <div class="sticky-apply"><button type="button" class="icon-btn ${status ? 'is-on' : ''}" data-act="save" aria-label="Save">${ICON.bookmark}</button><button type="button" class="btn btn-primary" data-act="apply">Apply now ${ICON.external}</button></div>`;
+
+  root.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => {
+    root.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('is-on', b === button));
+    root.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== button.dataset.tab; });
+  }));
+  const onChange = async () => { await load(); };
+  root.querySelectorAll('[data-act=save]').forEach((b) => b.addEventListener('click', () => saveJob(job, onChange)));
+  root.querySelectorAll('[data-act=apply]').forEach((b) => b.addEventListener('click', () => applyToJob(job, onChange)));
+  root.querySelector('[data-act=share]').addEventListener('click', () => shareJob(job));
+  const briefBtn = document.getElementById('brief-btn');
+  briefBtn.addEventListener('click', async () => {
+    const target = document.getElementById('brief-text');
+    target.hidden = true;
+    await loadBrief(job, target, briefBtn);
+    if (!target.hidden) briefBtn.hidden = true;
+    target.hidden = false;
+  });
+  renderTrack();
+  reveal(root);
+  requestAnimationFrame(() => root.querySelectorAll('.progress i').forEach((bar) => { bar.style.width = bar.dataset.w + '%'; }));
+}
+
+function renderTrack() {
+  const card = document.getElementById('track-card');
+  const app = job.application;
+  if (!SANTA.auth) {
+    card.innerHTML = `<h3>Track this application</h3><p class="soft small" style="margin:6px 0 12px">Santa will remember where you are and remind you before the deadline.</p><button type="button" class="btn btn-secondary btn-block" id="track-signin">${ICON.lock} Sign in to track</button>`;
+    card.querySelector('#track-signin').addEventListener('click', () => requireAccount('Create a free account to track this application.'));
+    return;
+  }
+  card.innerHTML = `
+    <h3>Your progress</h3>
+    <div class="menu" style="margin:12px 0"><button type="button" class="btn btn-secondary btn-block" id="status-btn">${app ? `<i class="dot" style="--dot:${STATUS_META[app.status].color}"></i>${STATUS_META[app.status].label}` : 'Not tracking yet'} ${ICON.chevron}</button></div>
+    <label class="field">Notes <span class="field-hint">only you can see these</span>
+      <textarea class="input" id="notes" rows="3" placeholder="Referral from…, interview on…">${escapeHTML(app ? app.notes || '' : '')}</textarea></label>
+    <button type="button" class="btn btn-ghost btn-sm" id="notes-save" style="margin-top:8px">Save note</button>`;
+  const statusBtn = card.querySelector('#status-btn');
+  statusBtn.addEventListener('click', () => changeStatus(job, statusBtn, app && app.status, () => load()));
+  card.querySelector('#notes-save').addEventListener('click', async () => {
+    let id = app && app.id;
+    if (!id) { const created = await trackJob(job.id, 'saved'); id = created && created.id; }
+    if (!id) return;
+    const result = await fetchJSON(`/applications/${id}`, { method: 'PATCH', body: JSON.stringify({ notes: card.querySelector('#notes').value }) });
+    if (result.ok) { toast('Note saved.'); load(); }
+  });
+}
+
+async function load() {
+  const [result, loaded] = await Promise.all([fetchJSON(`/jobs/${JOB_ID}`), loadPrefs()]);
+  prefs = loaded;
+  if (!result.ok) {
+    root.innerHTML = `<div class="card empty"><img class="mascot" src="/static/assets/santa-icon-192.png" alt=""><h2>This posting has closed</h2><p>Santa removes postings once their application window passes. Plenty more where that came from!</p><a class="btn btn-primary" href="/app">Back to your feed</a></div>`;
+    return;
+  }
+  job = result.data;
+  render();
+}
+window.addEventListener('santa:auth', load);
+load();
+</script>
+{% endblock %}

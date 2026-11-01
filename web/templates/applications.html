@@ -1,0 +1,111 @@
+{% extends "shell.html" %}
+{% block title %}My Applications — Santa{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>My Applications</h1><p>Everything you're chasing, in one calm place. Drag a card — or tap its menu — to move it.</p></div>
+  <a class="btn btn-secondary" href="{{ url_for('pages.dashboard') }}">+ Find more</a>
+</div>
+<div id="root"><div class="skeleton" style="min-height:110px;margin-bottom:16px"></div><div class="skeleton" style="min-height:320px"></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const COLUMNS = ['saved', 'applied', 'interviewing', 'offer'];
+const root = document.getElementById('root');
+let apps = [];
+
+function card(app) {
+  const days = Math.floor((Date.now() - new Date(app.updated_at)) / 86400000);
+  const stale = app.status === 'applied' && days >= 7;
+  return `<article class="app-card" draggable="true" data-id="${app.id}" data-job="${app.job_id}">
+    <div class="app-card-top">
+      <div class="avatar avatar-sm" style="${avatarStyle(app.job.company)}">${escapeHTML(initialOf(app.job.company))}</div>
+      <div class="grow"><h4>${escapeHTML(app.job.title)}</h4><span class="co">${escapeHTML(app.job.company)} · ${escapeHTML(app.job.location)}</span></div>
+      <span class="menu"><button type="button" class="icon-btn" style="width:30px;height:30px" data-move aria-label="Move ${escapeHTML(app.job.title)}">${ICON.chevron}</button></span>
+    </div>
+    ${app.notes ? `<p class="note-line">${escapeHTML(app.notes)}</p>` : ''}
+    <div class="app-card-foot">
+      <span>${stale ? `<span class="tag tag-warn">${ICON.clock} ${days}d, no reply</span>` : `Updated ${timeAgo(app.updated_at)}`}</span>
+      <a href="/app/jobs/${app.job_id}" class="small">Open →</a>
+    </div>
+  </article>`;
+}
+
+function render() {
+  if (!SANTA.auth) {
+    root.innerHTML = `<div class="card locked"><img class="mascot mascot-float" src="/static/assets/santa-icon-192.png" alt=""><h2>Your application board lives here</h2><p>Save jobs and mark what you've applied to — Santa tracks replies, reminds you before deadlines, and tells you when it's time to follow up.</p><button type="button" class="btn btn-primary" id="signin">Create free account</button><a class="btn btn-ghost" href="/app">Browse jobs first</a></div>`;
+    root.querySelector('#signin').addEventListener('click', () => requireAccount('Create a free account to start your application board.'));
+    return;
+  }
+  const by = (s) => apps.filter((a) => a.status === s);
+  const closed = apps.filter((a) => ['rejected', 'withdrawn'].includes(a.status));
+  root.innerHTML = `
+    <section class="stats-row" id="stats"></section>
+    ${!apps.length ? `<div class="card empty"><img class="mascot" src="/static/assets/santa-icon-192.png" alt=""><h2>No applications yet</h2><p>Save a job or hit Apply on one — it lands here automatically.</p><a class="btn btn-primary" href="/app">Explore your feed</a></div>` : `
+    <section class="board" aria-label="Application board">
+      ${COLUMNS.map((s) => `<div class="column" data-col="${s}">
+        <div class="column-head"><span><i class="dot" style="--dot:${STATUS_META[s].color};display:inline-block;margin-right:8px"></i>${STATUS_META[s].label}<span class="count">${by(s).length}</span></span></div>
+        ${by(s).map(card).join('') || `<p class="column-empty">${s === 'offer' ? 'Your wins will land here 🎉' : 'Drop a card here'}</p>`}
+      </div>`).join('')}
+    </section>
+    ${closed.length ? `<details class="closed-wrap"><summary>Closed (${closed.length})</summary><div class="closed-list">${closed.map(card).join('')}</div></details>` : ''}`}`;
+  renderStats();
+  wire();
+}
+
+async function renderStats() {
+  const result = await fetchJSON('/applications/stats');
+  const el = document.getElementById('stats');
+  if (!el || !result.ok) return;
+  const s = result.data;
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  el.innerHTML = [
+    ['Response rate', s.applied_count ? pct(s.response_rate) : '—', s.applied_count ? `${s.response_count} of ${s.applied_count} replied` : 'Appears once you apply'],
+    ['Offer rate', s.applied_count ? pct(s.offer_rate) : '—', `${s.offer_count} offer${s.offer_count === 1 ? '' : 's'}`],
+    ['Total tracked', s.applications_tracked, apps.filter((a) => a.status === 'interviewing').length + ' interviewing'],
+    ['Avg. reply time', s.avg_response_hours != null ? `${Math.round(s.avg_response_hours / 24)}d` : '—', 'From apply to first reply'],
+  ].map(([label, value, sub]) => `<article class="card tile reveal"><span class="tile-value">${value}</span><span class="tile-label">${label}</span><span class="tile-sub">${sub}</span></article>`).join('');
+  reveal(el);
+}
+
+async function move(appId, status) {
+  const app = apps.find((a) => String(a.id) === String(appId));
+  if (!app || app.status === status) return;
+  const previous = app.status;
+  app.status = status;
+  render();
+  const result = await fetchJSON(`/applications/${appId}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  if (!result.ok) { app.status = previous; render(); toast('Couldn’t move that — try again.'); return; }
+  Object.assign(app, result.data);
+  const cheer = { interviewing: 'Interview stage — nice! Want to prep with Santa?', offer: 'An offer! 🎉 Congratulations — you earned this.', rejected: 'Their loss. On to the next one — Santa’s still looking.' };
+  toast(cheer[status] || `Moved to ${STATUS_META[status].label}.`, { label: 'Undo', run: () => move(appId, previous) });
+}
+
+function wire() {
+  root.querySelectorAll('.app-card').forEach((el) => {
+    el.addEventListener('dragstart', (e) => { el.classList.add('is-dragging'); e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed = 'move'; });
+    el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
+    const btn = el.querySelector('[data-move]');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const app = apps.find((a) => String(a.id) === el.dataset.id);
+      openStatusMenu(btn, app.status, (status) => move(app.id, status));
+    });
+  });
+  root.querySelectorAll('.column').forEach((col) => {
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('is-over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('is-over'));
+    col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('is-over'); move(e.dataTransfer.getData('text/plain'), col.dataset.col); });
+  });
+}
+
+async function load() {
+  if (SANTA.auth) {
+    const result = await fetchJSON('/applications');
+    apps = (result.ok && result.data) || [];
+  }
+  render();
+}
+window.addEventListener('santa:auth', load);
+load();
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon, theme_toggle %}
+{% set nav = [
+  ('home', 'Home', url_for('pages.dashboard')),
+  ('applications', 'My Applications', url_for('pages.applications_page')),
+  ('insights', 'Market Insights', url_for('pages.insights_page')),
+  ('ask', 'Ask Santa', url_for('pages.ask_page')),
+  ('resume', 'Resume', url_for('pages.resume_page')),
+  ('preferences', 'Preferences', url_for('pages.preferences_page')),
+] %}
+{% set tabs = [
+  ('home', 'Home', url_for('pages.dashboard')),
+  ('applications', 'Tracker', url_for('pages.applications_page')),
+  ('ask', 'Ask', url_for('pages.ask_page')),
+  ('insights', 'Insights', url_for('pages.insights_page')),
+  ('preferences', 'You', url_for('pages.preferences_page')),
+] %}
+{% block body %}
+<div class="app">
+  <aside class="sidebar" aria-label="Santa navigation">
+    <a class="brand" href="{{ url_for('pages.index') }}">
+      <img src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="Santa" width="36" height="36">
+      <span>Santa Scout</span>
+    </a>
+    {% for key, label, href in nav %}
+      <a class="nav-item {{ 'is-active' if active == key }}" href="{{ href }}" title="{{ label }}" {% if active == key %}aria-current="page"{% endif %}>
+        {{ icon(key) }}<span>{{ label }}</span>
+      </a>
+    {% endfor %}
+    <div class="sidebar-spacer"></div>
+    <div class="companion-card">
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="">
+      <div><strong>Santa is on the lookout</strong>Checking new postings every 2 hours.</div>
+    </div>
+    <div class="sidebar-foot">
+      <a class="user-chip" href="{{ url_for('pages.preferences_page') }}" title="Your profile">
+        <span class="avatar avatar-sm" data-user-initial>G</span>
+        <span class="who"><strong data-user-name>Guest</strong><span data-user-sub>Browsing freely</span></span>
+      </a>
+      {{ theme_toggle() }}
+      <button type="button" class="icon-btn" data-signin data-guest-only aria-label="Log in or sign up" title="Log in / sign up">{{ icon('login') }}</button>
+      <button type="button" class="icon-btn" data-logout data-auth-only hidden aria-label="Log out" title="Log out">{{ icon('logout') }}</button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('pages.index') }}">
+      <img src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="" width="32" height="32">
+      <span>Santa</span>
+    </a>
+    <div class="topbar-actions">
+      {{ theme_toggle() }}
+      <button type="button" class="btn btn-secondary btn-sm" data-signin data-guest-only>Log in</button>
+      <a class="icon-btn" href="{{ url_for('pages.resume_page') }}" aria-label="Resume" data-auth-only hidden>{{ icon('resume') }}</a>
+    </div>
+  </header>
+
+  <main class="main" id="main">
+    <div class="main-inner page-enter">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <nav class="tabbar" aria-label="Santa tabs">
+    {% for key, label, href in tabs %}
+      <a class="tab {{ 'is-active' if active == key }}" href="{{ href }}" {% if active == key %}aria-current="page"{% endif %}>{{ icon(key) }}<span>{{ label }}</span></a>
+    {% endfor %}
+  </nav>
+</div>
+{% endblock %}
