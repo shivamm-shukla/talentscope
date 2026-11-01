@@ -1,5 +1,6 @@
 """JSON routes for authentication, preference management, and Q&A."""
 
+from collections import Counter
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -13,6 +14,7 @@ from ai.registry import create_generate_fn, create_qa_engine
 from ai.resume_prompt import generate_resume_content
 from analysis.classify import LISTING_TYPES, WORK_MODES
 from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
+from analysis.locations import display_locations
 from analysis.outcomes import compute_outcome_stats
 from analysis.resume_builder import build_resume_draft
 from analysis.trends import compute_trends, stipend_distribution
@@ -608,6 +610,14 @@ def trends():
             for job in session.scalars(select(Job)).all()
         ]
     report = compute_trends(postings, period)
+    # Cities are counted per canonical place, not per raw location string, so
+    # "Bengaluru"/"Bangalore" merge and "Pune, Bengaluru" counts for both.
+    city_counts = Counter(
+        place
+        for posting in postings
+        if period.start <= posting.posted_at <= period.end
+        for place in display_locations(posting.location, posting.work_mode)
+    )
     stipends = [
         posting.salary_numeric
         for posting in postings
@@ -621,7 +631,8 @@ def trends():
         # Ranked [name, count] pairs rather than objects: jsonify sorts object
         # keys, which would throw away the most-common-first order.
         skills=list(report.skills.items())[:TREND_TOP_N],
-        locations=list(report.locations.items())[:TREND_TOP_N],
+        locations=city_counts.most_common(TREND_TOP_N),
+        location_total=sum(city_counts.values()),
         stipends=list(stipend_distribution(stipends).items()),
     )
 

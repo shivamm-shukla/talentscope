@@ -74,3 +74,16 @@ def location_matches(
     if work_mode == REMOTE:
         places.add(REMOTE)
     return bool(wanted & places)
+
+
+def display_locations(raw: str, work_mode: str | None = None) -> list[str]:
+    """Human-readable canonical places for a posting, for aggregation.
+
+    "Pune, Bengaluru" -> ["Pune", "Bangalore"]; a remote-classified posting
+    always includes "Remote". Used by market trends so one city isn't split
+    across spellings and multi-city postings count toward each city.
+    """
+    places = sorted(location_set(raw))
+    if work_mode == REMOTE and REMOTE not in places:
+        places.append(REMOTE)
+    return [place.title() for place in places] or ["Unspecified"]

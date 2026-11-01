@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}Santa — your career, sorted before you ask{% endblock %}</title>
   <meta name="description" content="Santa is a proactive career companion for CS & BCA students — it finds internships and jobs that fit you, tracks your applications and nudges you before deadlines.">
-  <meta name="theme-color" content="#c9b8f2">
+  <meta name="theme-color" content="#efe7fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141128" media="(prefers-color-scheme: dark)">
   <script>
     // Runs before first paint so the page never flashes the wrong theme.
     (function () {
@@ -22,7 +23,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='assets/santa-icon-64.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/santa-icon-192.png') }}">

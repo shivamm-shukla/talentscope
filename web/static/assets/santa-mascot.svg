@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 112" role="img" aria-label="Santa">
+  <style>
+    .eyes { transform-origin: 64px 70px; animation: blink 5.5s infinite; }
+    .hat { transform-origin: 40px 48px; animation: sway 6s ease-in-out infinite; }
+    @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
+    @keyframes sway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-3deg); } }
+    @media (prefers-reduced-motion: reduce) { .eyes, .hat { animation: none; } }
+  </style>
+  <defs>
+    <radialGradient id="body" cx="42%" cy="34%" r="70%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#fbf8ff"/>
+      <stop offset="1" stop-color="#ddd3f6"/>
+    </radialGradient>
+    <radialGradient id="warm" cx="20%" cy="80%" r="60%">
+      <stop offset="0" stop-color="#ffd9c2" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#ffd9c2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hat" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff6a5c"/>
+      <stop offset="0.55" stop-color="#e5322f"/>
+      <stop offset="1" stop-color="#a8141c"/>
+    </linearGradient>
+    <radialGradient id="pom" cx="38%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4def4"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="62" cy="106" rx="40" ry="5" fill="#6d5bd0" opacity="0.14"/>
+  <path d="M18 74 C 18 46, 38 30, 62 30 C 88 30, 106 46, 106 74 C 106 94, 88 104, 62 104 C 36 104, 18 94, 18 74 Z" fill="url(#body)"/>
+  <path d="M18 74 C 18 46, 38 30, 62 30 C 88 30, 106 46, 106 74 C 106 94, 88 104, 62 104 C 36 104, 18 94, 18 74 Z" fill="url(#warm)"/>
+  <g class="eyes" fill="none" stroke="#2a2340" stroke-width="4.2" stroke-linecap="round">
+    <path d="M42 72 q7 -8 14 0"/>
+    <path d="M70 72 q7 -8 14 0"/>
+  </g>
+  <g class="hat">
+    <path d="M20 58 C 22 32, 44 14, 70 14 C 92 14, 108 26, 114 44 C 116 50, 114 56, 110 58 C 104 48, 94 42, 82 40 C 62 37, 38 44, 20 58 Z" fill="url(#hat)"/>
+    <path d="M30 46 C 44 30, 64 22, 84 24" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="111" cy="60" r="10" fill="url(#pom)"/>
+  </g>
+</svg>

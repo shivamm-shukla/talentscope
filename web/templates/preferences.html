@@ -2,41 +2,43 @@
 {% block title %}Preferences — Santa{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><h1>Preferences</h1><p>Shape how Santa finds and brings opportunities to you. Change anything, anytime.</p></div>
+  <div><h1>Preferences</h1><p>Personalise how Santa finds and brings opportunities to you.</p></div>
 </div>
 <div class="settings-grid">
   <div>
     <section class="card settings-card reveal">
       <h2>What you're looking for</h2>
       <p>Leave everything empty and Santa shows you every live posting.</p>
-      <label class="field">Your name <input class="input" id="name" placeholder="What should Santa call you?" autocomplete="given-name"></label>
-      <div class="step-section"><h3>Skills</h3><div class="chips" id="skills"></div>
+      <div class="settings-section"><h3>Skills</h3><div class="chips" id="skills"></div>
         <form class="add-chip" data-add="skills"><input class="input" name="value" placeholder="Add a skill (e.g. docker)" aria-label="Add a skill"><button class="btn btn-secondary btn-sm">Add</button></form>
         <p class="suggest-label">Popular</p><div class="chips" id="skills-suggest"></div>
       </div>
-      <div class="step-section"><h3>Preferred locations</h3><div class="chips" id="locations"></div>
+      <div class="settings-section"><h3>Preferred Locations</h3><div class="chips" id="locations"></div>
         <form class="add-chip" data-add="locations"><input class="input" name="value" placeholder="Add a city or Remote" aria-label="Add a location"><button class="btn btn-secondary btn-sm">Add</button></form>
         <p class="suggest-label">Popular</p><div class="chips" id="locations-suggest"></div>
       </div>
-      <div class="step-section" style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
-        <label class="field">Minimum stipend
+      <div class="settings-section two-col">
+        <label class="field">Minimum Stipend
           <select class="select" id="stipend"><option value="">No minimum</option><option value="5000">₹5,000 / month</option><option value="10000">₹10,000 / month</option><option value="15000">₹15,000 / month</option><option value="20000">₹20,000 / month</option><option value="30000">₹30,000 / month</option><option value="50000">₹50,000 / month</option></select>
         </label>
-        <div class="field">Looking for <div class="chips" id="types"></div></div>
+        <label class="field">Your name <input class="input" id="name" placeholder="What should Santa call you?" autocomplete="given-name"></label>
       </div>
-      <div class="step-section"><h3>How you like to work</h3><div class="chips" id="modes"></div>
-        <p class="field-hint" style="margin-top:6px">Pick none to see every kind.</p></div>
+      <div class="settings-section two-col">
+        <div class="field">Looking for <div class="chips" id="types"></div></div>
+        <div class="field">How you like to work <div class="chips" id="modes"></div></div>
+      </div>
+      <p class="field-hint" style="margin-top:10px">Pick none to see every kind.</p>
     </section>
   </div>
 
   <div>
     <section class="card settings-card reveal">
       <h2>Alerts</h2>
-      <p>New matches and deadline nudges, delivered.</p>
+      <p>New matches and deadline nudges, delivered your way.</p>
       <div class="lock-note" data-guest-only><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Alerts need a free account so Santa knows where to reach you.</div>
       <div class="setting-row">
         <span class="setting-icon" style="color:#229ed9"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.2-8.3c.4-.4-.1-.6-.6-.2L6.1 13.6l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.6 3c.9-.3 1.7.2 1.3 1.3z"/></svg></span>
-        <div class="grow"><strong>Telegram alerts</strong><span class="soft">Instant updates for new matches</span></div>
+        <div class="grow"><strong>Telegram Alerts</strong><span class="soft">Instant opportunity updates</span></div>
         <label class="switch"><input type="checkbox" data-channel="telegram" aria-label="Telegram alerts"><span></span></label>
       </div>
       <div id="telegram-row" hidden style="padding:0 0 12px 52px">
@@ -45,23 +47,24 @@
       </div>
       <div class="setting-row">
         <span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
-        <div class="grow"><strong>Email digest</strong><span class="soft">Your best matches, summarised</span></div>
+        <div class="grow"><strong>Email Digest</strong><span class="soft">A daily/weekly summary</span></div>
         <label class="switch"><input type="checkbox" data-channel="email" aria-label="Email digest"><span></span></label>
       </div>
     </section>
 
     <section class="card settings-card reveal">
-      <h2>Connected accounts</h2>
+      <h2>Connected Accounts</h2>
       <p>Santa learns your real skills from what you've built.</p>
       <div class="setting-row">
         <span class="setting-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.6 18.3 5 18.3 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg></span>
-        <div class="grow"><strong>GitHub</strong><span class="soft" id="github-status">Not connected</span>
+        <div class="grow"><strong>GitHub</strong><span class="soft" id="github-detail">Santa scans your public repos</span>
           <input class="input" id="github" placeholder="github-username" style="margin-top:8px;min-height:38px" autocapitalize="off" spellcheck="false"></div>
+        <span id="github-status" class="not-connected">Not connected</span>
       </div>
       <div class="setting-row">
         <span class="setting-icon" style="color:#0a66c2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.4 20.5h-3.6v-5.6c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9v5.7H9.3V9h3.4v1.6c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5zM5.3 7.4a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.1 20.5H3.5V9h3.6zM22.2 0H1.8C.8 0 0 .8 0 1.7v20.6c0 .9.8 1.7 1.8 1.7h20.4c1 0 1.8-.8 1.8-1.7V1.7C24 .8 23.2 0 22.2 0z"/></svg></span>
-        <div class="grow"><strong>LinkedIn</strong><span class="soft" id="linkedin-status">Not imported</span></div>
-        <label class="btn btn-secondary btn-sm" style="cursor:pointer">Import<input type="file" accept=".zip" id="linkedin-file" hidden></label>
+        <div class="grow"><strong>LinkedIn</strong><span class="soft" id="linkedin-status">Upload your data export (.zip)</span></div>
+        <label class="not-connected" style="cursor:pointer" id="linkedin-label"><span id="linkedin-cta">Not connected →</span><input type="file" accept=".zip" id="linkedin-file" hidden></label>
       </div>
     </section>
 
@@ -98,8 +101,8 @@ function renderChips() {
     el.innerHTML = prefs[key].length ? '' : `<span class="muted small">None yet — ${key === 'skills' ? 'all skills' : 'anywhere'}</span>`;
     prefs[key].forEach((value) => {
       const chip = document.createElement('span');
-      chip.className = 'chip is-on';
-      chip.innerHTML = `${escapeHTML(value)}<button type="button" class="chip-x" aria-label="Remove ${escapeHTML(value)}">×</button>`;
+      chip.className = 'chip';
+      chip.innerHTML = `${escapeHTML(key === 'skills' ? prettySkill(value) : value)}<button type="button" class="chip-x" aria-label="Remove ${escapeHTML(value)}">×</button>`;
       chip.querySelector('button').addEventListener('click', () => { prefs[key] = prefs[key].filter((v) => v !== value); markDirty(); renderChips(); });
       el.appendChild(chip);
     });
@@ -109,8 +112,8 @@ function renderChips() {
     pool.filter((v) => !prefs[key].map(norm).includes(norm(v))).forEach((value) => {
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'chip';
-      chip.textContent = `+ ${value}`;
+      chip.className = 'chip suggest';
+      chip.textContent = `+ ${key === 'skills' ? prettySkill(value) : value}`;
       chip.addEventListener('click', () => { prefs[key] = [...prefs[key], value]; markDirty(); renderChips(); });
       suggest.appendChild(chip);
     });
@@ -142,10 +145,14 @@ function render() {
   document.querySelectorAll('[data-channel]').forEach((box) => { box.checked = (prefs.channels || []).includes(box.dataset.channel); });
   $('telegram-row').hidden = !(prefs.channels || []).includes('telegram');
   const gh = prefs.github_profile;
-  $('github-status').textContent = !prefs.github_username ? 'Not connected'
-    : gh ? `✓ ${gh.repo_count} repos synced · ${timeAgo(gh.synced_at)}` : 'Connected — first sync within a couple of hours';
+  $('github-status').textContent = prefs.github_username ? 'Connected ✓' : 'Not connected';
+  $('github-status').className = prefs.github_username ? 'connected' : 'not-connected';
+  $('github-detail').textContent = !prefs.github_username ? 'Santa scans your public repos'
+    : gh ? `${gh.repo_count} repos synced · ${timeAgo(gh.synced_at)}` : 'First sync within a couple of hours';
   const li = prefs.linkedin_profile;
-  $('linkedin-status').textContent = li ? `✓ ${li.position_count} positions, ${li.skill_count} skills · ${timeAgo(li.synced_at)}` : 'Upload your data export (.zip)';
+  $('linkedin-status').textContent = li ? `${li.position_count} positions, ${li.skill_count} skills · ${timeAgo(li.synced_at)}` : 'Upload your data export (.zip)';
+  $('linkedin-cta').textContent = li ? 'Connected ✓' : 'Not connected →';
+  $('linkedin-label').className = li ? 'connected' : 'not-connected';
   renderChips();
 }
 

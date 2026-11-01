@@ -130,7 +130,8 @@ def test_trends_aggregates_recent_postings(client) -> None:
 
     assert body["total_jobs"] == 2
     assert body["skills"] == [["python", 2], ["sql", 1]]
-    assert body["locations"] == [["Bengaluru", 1], ["Pune", 1]]
+    assert body["locations"] == [["Bangalore", 1], ["Pune", 1]]
+    assert body["location_total"] == 2
     assert body["stipends"] == [
         ["<10k", 0],
         ["10-20k", 1],

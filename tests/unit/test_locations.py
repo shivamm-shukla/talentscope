@@ -1,4 +1,9 @@
-from analysis.locations import canonical_location, location_matches, location_set
+from analysis.locations import (
+    canonical_location,
+    display_locations,
+    location_matches,
+    location_set,
+)
 
 
 def test_city_aliases_share_one_canonical_name() -> None:
@@ -32,3 +37,12 @@ def test_remote_preference_matches_remote_work_mode() -> None:
     assert location_matches(["Remote"], "Bengaluru", work_mode="remote")
     assert location_matches(["remote"], "Work from home")
     assert not location_matches(["Remote"], "Bengaluru", work_mode="onsite")
+
+
+def test_display_locations_merges_spellings_and_splits_lists() -> None:
+    assert display_locations("Pune, Bengaluru") == ["Bangalore", "Pune"]
+    assert display_locations("Bengaluru", work_mode="remote") == [
+        "Bangalore",
+        "Remote",
+    ]
+    assert display_locations("") == ["Unspecified"]

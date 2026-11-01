@@ -19,7 +19,7 @@
 <div class="app">
   <aside class="sidebar" aria-label="Santa navigation">
     <a class="brand" href="{{ url_for('pages.index') }}">
-      <img src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="Santa" width="36" height="36">
+      <img src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="Santa" width="38" height="33">
       <span>Santa Scout</span>
     </a>
     {% for key, label, href in nav %}
@@ -29,12 +29,13 @@
     {% endfor %}
     <div class="sidebar-spacer"></div>
     <div class="companion-card">
-      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="">
-      <div><strong>Santa is on the lookout</strong>Checking new postings every 2 hours.</div>
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="60" height="52">
+      Santa is looking out for you…
+      <span>Checking new postings every 2 hours.</span>
     </div>
     <div class="sidebar-foot">
       <a class="user-chip" href="{{ url_for('pages.preferences_page') }}" title="Your profile">
-        <span class="avatar avatar-sm" data-user-initial>G</span>
+        <span class="avatar" data-user-initial>G</span>
         <span class="who"><strong data-user-name>Guest</strong><span data-user-sub>Browsing freely</span></span>
       </a>
       {{ theme_toggle() }}
@@ -45,8 +46,8 @@
 
   <header class="topbar">
     <a class="brand" href="{{ url_for('pages.index') }}">
-      <img src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="" width="32" height="32">
-      <span>Santa</span>
+      <img src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="34" height="30">
+      <span>Santa Scout</span>
     </a>
     <div class="topbar-actions">
       {{ theme_toggle() }}
@@ -56,6 +57,7 @@
   </header>
 
   <main class="main" id="main">
+    {% block banner %}{% endblock %}
     <div class="main-inner page-enter">
       {% block content %}{% endblock %}
     </div>

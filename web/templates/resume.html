@@ -7,7 +7,7 @@
 </div>
 
 <div id="guest" class="card locked" data-guest-only>
-  <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-icon-192.png') }}" alt="" width="96" height="96">
+  <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="140" height="122">
   <h2>Let Santa draft your resume</h2>
   <p>With a free account, Santa writes a first draft from your skills, GitHub and LinkedIn — then you polish it. Every version is saved.</p>
   <button type="button" class="btn btn-primary" data-signin>Create free account</button>
@@ -16,7 +16,7 @@
 <div id="workspace" data-auth-only hidden>
   <p class="form-error" id="error" hidden></p>
   <div id="empty" class="card empty" hidden>
-    <img class="mascot" src="{{ url_for('static', filename='assets/santa-icon-192.png') }}" alt="">
+    <img class="mascot" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="">
     <h2>No resume yet</h2>
     <p>Hit “Generate new version” — Santa works with whatever you've shared, even just a few skills.</p>
   </div>

@@ -9,7 +9,11 @@ const SANTA = window.SANTA || { auth: false, name: '', email: '' };
 const ICON = {
   bookmark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
   share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>',
-  arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  arrow: '<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  gem: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12l4 6-10 12L2 9z" opacity=".9"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
   external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>',
   circle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8"/></svg>',
@@ -178,12 +182,12 @@ function openAuthModal(reason, done) {
   overlay.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button type="button" class="icon-btn modal-close" aria-label="Close">${ICON.close}</button>
-      <img class="mascot" src="/static/assets/santa-icon-192.png" alt="">
+      <img class="mascot mascot-float" src="/static/assets/santa-mascot.svg" alt="">
       <h2 id="auth-title">Let's keep this safe for you</h2>
       <p class="lead">${escapeHTML(reason || 'Create a free account so Santa can remember this for you.')}</p>
-      <div class="segmented" style="display:flex;margin-bottom:16px">
-        <button type="button" class="is-on" data-mode="signup" style="flex:1">Create account</button>
-        <button type="button" data-mode="login" style="flex:1">Log in</button>
+      <div class="seg" role="tablist">
+        <button type="button" class="is-on" data-mode="signup">Create account</button>
+        <button type="button" data-mode="login">Log in</button>
       </div>
       <form class="form" novalidate>
         <label class="field" data-only="signup">Your name <span class="field-hint">so Santa knows what to call you — optional</span>
@@ -302,7 +306,11 @@ function avatarStyle(company) {
   for (const ch of String(company)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   const h1 = hash % 360;
   const h2 = (h1 + 40) % 360;
-  return `--a1:hsl(${h1} 70% 62%);--a2:hsl(${h2} 75% 58%)`;
+  return `--a1:hsl(${h1} 72% 52%);--a2:hsl(${h2} 78% 58%)`;
+}
+
+function logoTile(company, size = '') {
+  return `<span class="logo-tile ${size}" style="${avatarStyle(company)}" aria-hidden="true"><span>${escapeHTML(initialOf(company))}</span></span>`;
 }
 
 function jobTags(job) {
@@ -341,6 +349,13 @@ function timeAgo(iso) {
 
 const norm = (s) => String(s).trim().toLowerCase();
 
+// Display names for the canonical (lowercase) skill vocabulary.
+const SKILL_LABELS = { sql: 'SQL', 'node.js': 'Node.js', 'c++': 'C++', javascript: 'JavaScript', typescript: 'TypeScript', 'machine learning': 'Machine Learning', 'data analysis': 'Data Analysis' };
+function prettySkill(skill) {
+  const key = norm(skill);
+  return SKILL_LABELS[key] || String(skill).replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
+
 // Mirrors analysis/locations.py — keep the two alias tables in sync.
 const LOCATION_ALIASES = {
   bengaluru: 'bangalore', 'bangalore urban': 'bangalore', gurugram: 'gurgaon', 'new delhi': 'delhi',
@@ -375,7 +390,7 @@ function computeFit(job, prefs) {
   const reasons = [];
   if (matched.length) {
     score += 0.6 * (matched.length / wanted.size) * (matched.length / jobSkills.length);
-    reasons.push(`Uses your ${matched.slice(0, 3).join(', ')}`);
+    reasons.push(`Uses your ${matched.slice(0, 3).map(prettySkill).join(', ')}`);
   }
   const locationOk = locationMatches(prefs.locations, job.location, job.work_mode);
   if (locationOk) {
@@ -395,7 +410,7 @@ function computeFit(job, prefs) {
 }
 
 function readableReason(reason) {
-  if (reason.startsWith('skills: ')) return `Uses your ${reason.slice(8)}`;
+  if (reason.startsWith('skills: ')) return `Uses your ${reason.slice(8).split(', ').map(prettySkill).join(', ')}`;
   if (reason.startsWith('location: ')) return `In ${reason.slice(10)}`;
   if (reason === 'stipend meets minimum') return 'Meets your stipend';
   return reason;
@@ -482,7 +497,7 @@ function openStatusMenu(anchor, current, onPick) {
   panel.setAttribute('role', 'menu');
   panel.innerHTML = Object.entries(STATUS_META).map(([key, meta]) => (
     `<button type="button" role="menuitem" data-status="${key}" class="${key === current ? 'is-current' : ''}"><i class="dot" style="--dot:${meta.color}"></i>${meta.label}${key === current ? ' ✓' : ''}</button>`
-  )).join('') + (current ? `<hr style="border:0;border-top:1px solid var(--border);margin:4px 6px"><button type="button" role="menuitem" data-status="" style="color:var(--bad)">${ICON.close.replace('<svg', '<svg width="14" height="14"')}Remove from tracker</button>` : '');
+  )).join('') + (current ? `<hr><button type="button" role="menuitem" data-status="" style="color:var(--bad)">${ICON.close.replace('<svg', '<svg width="14" height="14"')}Remove from tracker</button>` : '');
   // Fixed to the viewport (not inside the card) so scroll containers like
   // the board can't clip it; opens below the button, or above if no room.
   document.body.appendChild(panel);
@@ -550,33 +565,38 @@ function renderJobCard(item, prefs) {
   card.dataset.jobId = job.id;
   card.tabIndex = 0;
   card.setAttribute('aria-label', `${job.title} at ${job.company}`);
+  const why = reasons.length
+    ? `<div class="why"><b>Why this fits you</b><ul>${reasons.slice(0, 3).map((r) => `<li>${ICON.check}${escapeHTML(r)}</li>`).join('')}</ul></div>`
+    : (job.skills || []).length ? `<div class="why"><b>Skills</b><ul><li>${job.skills.slice(0, 6).map((k) => escapeHTML(prettySkill(k))).join(' · ')}</li></ul></div>` : '<div class="why"></div>';
+  const matchPill = score != null && score > 0 ? `<span class="match-pill ${score >= 70 ? '' : 'mid'}">${ICON.gem}${score}% Match</span>` : '';
   card.innerHTML = `
-    <div class="job-card-head">
-      <div class="avatar" style="${avatarStyle(job.company)}">${escapeHTML(initialOf(job.company))}</div>
-      <div class="job-card-title">
+    <div class="job-head">
+      ${logoTile(job.company)}
+      <div class="job-title">
         <h3>${escapeHTML(job.title)}</h3>
-        <p>${escapeHTML(job.company)} · ${escapeHTML(job.location)}${job.posted_at ? ` · <span class="muted">${timeAgo(job.posted_at)}</span>` : ''}</p>
+        <p>${escapeHTML(job.company)}<span class="sep">•</span>${escapeHTML(job.location)}${job.posted_at ? `<span class="sep">•</span><span class="muted">${timeAgo(job.posted_at)}</span>` : ''}</p>
       </div>
-      <div class="job-card-side">
-        ${score != null && score > 0 ? `<span class="match-pill ${score >= 70 ? '' : 'mid'}">${score}% match</span>` : ''}
-        <button type="button" class="icon-btn ${status ? 'is-on' : ''}" data-act="save" aria-pressed="${Boolean(status)}" aria-label="${status === 'saved' ? 'Remove from saved' : status ? 'Tracking' : 'Save'}" title="${status === 'saved' ? 'Saved — tap to remove' : status ? STATUS_META[status].label : 'Save for later'}">${ICON.bookmark}</button>
+      <div class="job-side">
+        ${matchPill}
+        <button type="button" class="icon-btn icon-btn-sm" data-act="share" aria-label="Share" title="Share">${ICON.share}</button>
+        <button type="button" class="icon-btn icon-btn-sm ${status ? 'is-on' : ''}" data-act="save" aria-pressed="${Boolean(status)}" aria-label="${status === 'saved' ? 'Remove from saved' : status ? 'Tracking' : 'Save'}" title="${status === 'saved' ? 'Saved — tap to remove' : status ? STATUS_META[status].label : 'Save for later'}">${ICON.bookmark}</button>
       </div>
     </div>
-    <div class="job-meta-row">
+    ${jobTags(job).length ? `<div class="job-tags">${jobTags(job).map(([tone, t]) => `<span class="tag ${tone ? 'tag-' + tone : ''}">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
+    <div class="job-facts">
       ${pay ? `<span class="job-pay">${escapeHTML(pay)}</span>` : ''}
-      ${jobTags(job).map(([tone, t]) => `<span class="tag ${tone ? 'tag-' + tone : ''}">${escapeHTML(t)}</span>`).join('')}
-      ${(job.quality_flags || []).includes('reposted') ? `<span class="tag tag-warn" title="Santa saw this posting disappear and come back — it may be kept alive by relisting">${ICON.alert} Repost detected</span>` : ''}
-      ${deadline ? `<span class="tag ${deadline.urgent ? 'tag-bad' : ''}">${ICON.clock} Apply in ${deadline.text}</span>` : ''}
+      ${(job.quality_flags || []).includes('reposted') ? `<span class="tag tag-bad" title="Santa saw this posting disappear and come back — it may be kept alive by relisting">${ICON.alert} Repost detected</span>` : ''}
+      ${matchPill ? matchPill.replace('class="match-pill', 'class="match-pill mobile-match') : ''}
+      <span class="facts-end">${deadline ? `<span class="deadline ${deadline.urgent ? 'urgent' : ''}">${ICON.clock} Apply in ${deadline.text}</span>` : ''}</span>
     </div>
-    ${reasons.length ? `<div class="why"><b>Why this fits you</b>${reasons.slice(0, 3).map((r) => `<span class="ok">${ICON.check}${escapeHTML(r)}</span>`).join('')}</div>`
-    : (job.skills || []).length ? `<div class="why"><b>Skills</b>${job.skills.slice(0, 6).map((s) => `<span>${escapeHTML(s)}</span>`).join(' · ')}</div>` : ''}
     <p class="company-brief" hidden></p>
-    <div class="job-actions">
-      <button type="button" class="btn btn-ghost btn-sm" data-act="share">${ICON.share} Share</button>
-      <span class="spacer"></span>
-      <button type="button" class="btn btn-secondary btn-sm" data-act="brief">Company info</button>
-      <span class="menu"><button type="button" class="btn btn-secondary btn-sm" data-act="status">${status ? `<i class="dot" style="--dot:${STATUS_META[status].color}"></i>${STATUS_META[status].label}` : 'Track'} ${ICON.chevron}</button></span>
-      <button type="button" class="btn btn-primary btn-sm" data-act="apply">Apply ${ICON.arrow}</button>
+    <div class="job-foot">
+      ${why}
+      <div class="job-actions">
+        <span class="menu"><button type="button" class="btn btn-ghost btn-sm" data-act="status" aria-label="Track status">${status ? `<i class="dot" style="--dot:${STATUS_META[status].color}"></i>${STATUS_META[status].label}` : 'Track'} ${ICON.chevron}</button></span>
+        <button type="button" class="btn btn-secondary btn-sm" data-act="brief">Company Info</button>
+        <button type="button" class="btn btn-primary btn-sm" data-act="apply">Apply ${ICON.arrow}</button>
+      </div>
     </div>`;
 
   const update = (next) => {

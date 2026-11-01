@@ -3,7 +3,7 @@
 {% block title %}Job — Santa{% endblock %}
 {% block body_class %}has-sticky-apply{% endblock %}
 {% block content %}
-<a class="back-link" href="{{ url_for('pages.dashboard') }}" id="back">{{ icon('back') }} Back to your feed</a>
+<a class="icon-btn back-btn" href="{{ url_for('pages.dashboard') }}" id="back" aria-label="Back to your feed" title="Back to your feed">{{ icon('back') }}</a>
 <div id="job-root">
   <div class="skeleton" style="min-height:180px;margin-bottom:16px"></div>
   <div class="skeleton" style="min-height:320px"></div>
@@ -28,52 +28,55 @@ function render() {
   const deadline = deadlineInfo(job.deadline_at);
   const pay = payText(job);
   document.title = `${job.title} at ${job.company} — Santa`;
+  const skillFit = hasPrefs(prefs) && (prefs.skills || []).length ? `
+      <h3 style="margin-top:26px">Your skill fit</h3>
+      <div class="fit-grid">
+        <div class="fit-col have"><h4>${ICON.check} Matched (${fit.matched.length})</h4><ul>${fit.matched.map((s) => `<li>${ICON.check}${escapeHTML(prettySkill(s))}</li>`).join('') || '<li class="muted">None of the listed skills yet</li>'}</ul></div>
+        <div class="fit-col build"><h4>${ICON.circle} To Build (${fit.missing.length})</h4><ul>${fit.missing.map((s) => `<li>${ICON.circle}${escapeHTML(prettySkill(s))}</li>`).join('') || '<li>Nothing — you cover it all 🎉</li>'}</ul></div>
+      </div>`
+    : `<div class="lock-note" style="margin-top:22px">${ICON.sparkle}<span>Tell Santa your skills and this shows what you already have and what to build. <a href="/welcome">Add my skills</a></span></div>`;
   root.innerHTML = `
-    <section class="card detail-headcard reveal" style="margin-bottom:16px">
-      <div class="detail-head">
-        <div class="avatar" style="${avatarStyle(job.company)}">${escapeHTML(initialOf(job.company))}</div>
-        <div class="grow">
-          <h1>${escapeHTML(job.title)}</h1>
-          <p class="soft" style="margin-top:4px">${escapeHTML(job.company)} · ${escapeHTML(job.location)}${job.posted_at ? ` · posted ${timeAgo(job.posted_at)}` : ''}</p>
-          <div class="job-meta-row" style="margin-top:12px">
-            ${pay ? `<span class="job-pay">${escapeHTML(pay)}</span>` : ''}
-            ${jobTags(job).map(([tone, t]) => `<span class="tag ${tone ? 'tag-' + tone : ''}">${escapeHTML(t)}</span>`).join('')}
-            ${(job.quality_flags || []).includes('reposted') ? `<span class="tag tag-warn">${ICON.alert} Repost detected</span>` : ''}
-          </div>
+    <section class="detail-head reveal">
+      ${logoTile(job.company, 'logo-tile-lg')}
+      <div class="grow">
+        <h1>${escapeHTML(job.title)}</h1>
+        <p class="meta">${escapeHTML(job.company)}<span class="sep">•</span>${escapeHTML(job.location)}${job.work_mode ? `<span class="sep">•</span>${escapeHTML(job.work_mode[0].toUpperCase() + job.work_mode.slice(1))}` : ''}${job.posted_at ? `<span class="sep">•</span>posted ${timeAgo(job.posted_at)}` : ''}</p>
+        <div class="job-tags">
+          ${jobTags(job).filter(([, t]) => t.toLowerCase() !== (job.work_mode || '')).map(([tone, t]) => `<span class="tag ${tone ? 'tag-' + tone : ''}">${escapeHTML(t)}</span>`).join('')}
+          ${pay ? `<span class="tag">${escapeHTML(pay)}</span>` : ''}
+          ${(job.quality_flags || []).includes('reposted') ? `<span class="tag tag-bad">${ICON.alert} Repost detected</span>` : ''}
         </div>
-        <div class="detail-actions">
+      </div>
+      <div class="detail-actions">
+        <div class="row">
           <button type="button" class="icon-btn ${status ? 'is-on' : ''}" data-act="save" aria-label="Save" title="${status ? STATUS_META[status].label : 'Save for later'}">${ICON.bookmark}</button>
-          <button type="button" class="icon-btn" data-act="share" aria-label="Share">${ICON.share}</button>
-          <button type="button" class="btn btn-primary apply-desktop" data-act="apply">Apply on ${escapeHTML(job.source === 'remotive' ? 'Remotive' : 'Internshala')} ${ICON.external}</button>
+          <button type="button" class="icon-btn" data-act="share" aria-label="Share" title="Share">${ICON.share}</button>
         </div>
+        <button type="button" class="btn btn-primary apply-desktop" data-act="apply">Apply on ${escapeHTML(job.source === 'remotive' ? 'Remotive' : 'Internshala')} ${ICON.external}</button>
       </div>
     </section>
 
     <div class="detail-grid">
       <section class="card reveal">
-        <div class="tabs-line" role="tablist">
+        <div class="seg-tabs" role="tablist">
           <button type="button" role="tab" class="is-on" data-tab="overview">Overview</button>
-          <button type="button" role="tab" data-tab="match">Match analysis</button>
+          <button type="button" role="tab" data-tab="match">Match Analysis</button>
           <button type="button" role="tab" data-tab="company">Company (AI)</button>
         </div>
         <div class="tab-panel" data-panel="overview">
           <h3>About the role</h3>
           <p class="prose" style="margin-top:8px">${job.description ? escapeHTML(job.description) : 'The posting didn’t include a description — open it on the source site for the full details.'}</p>
-          ${(job.skills || []).length ? `<h3 style="margin-top:22px">Skills they ask for</h3><div class="chips" style="margin-top:10px">${job.skills.map((s) => `<span class="tag ${fit.matched.includes(norm(s)) ? 'tag-good' : ''}">${fit.matched.includes(norm(s)) ? ICON.check : ''}${escapeHTML(s)}</span>`).join('')}</div>` : ''}
+          ${skillFit}
         </div>
         <div class="tab-panel" data-panel="match" hidden>
-          ${hasPrefs(prefs) ? `
-            <h3>Your skill fit</h3>
-            <p class="soft small" style="margin-top:4px">${reasons.length ? reasons.join(' · ') : 'Compared with the skills in your preferences.'}</p>
-            <div class="fit-grid">
-              <div class="fit-col have"><h4>You have (${fit.matched.length})</h4><ul>${fit.matched.map((s) => `<li>${ICON.check}${escapeHTML(s)}</li>`).join('') || '<li class="muted">None of the listed skills yet</li>'}</ul></div>
-              <div class="fit-col build"><h4>To build (${fit.missing.length})</h4><ul>${fit.missing.map((s) => `<li>${ICON.circle}${escapeHTML(s)}</li>`).join('') || '<li>Nothing — you cover it all 🎉</li>'}</ul></div>
-            </div>
-            ${fit.missing.length ? `<p class="soft small" style="margin-top:14px">Tip: if you've used ${escapeHTML(fit.missing[0])} even in a small project, mention it — and add it in <a href="/app/preferences">Preferences</a> so Santa can match better.</p>` : ''}`
-          : `<div class="empty" style="padding:24px 0"><h3>Tell Santa your skills</h3><p>Then this tab shows exactly what you already have and what to brush up on.</p><a class="btn btn-secondary" href="/welcome">Add my skills</a></div>`}
+          ${score != null && score > 0 ? `<div class="score-row" style="border:0;padding:0;margin-top:0"><span>Overall match</span><strong>${score}%</strong></div><div class="progress" style="margin-bottom:18px"><i data-w="${score}"></i></div>` : ''}
+          <h3>Why Santa picked this</h3>
+                    <div style="display:grid;gap:8px;margin-top:10px">${reasons.length ? reasons.map((r) => `<span class="deadline" style="color:var(--ink)">${ICON.check.replace('<svg', '<svg style="color:var(--good-strong)"')}${escapeHTML(r)}</span>`).join('') : '<p class="soft small">Add skills, cities or a minimum stipend in Preferences and Santa will explain each match.</p>'}</div>
+          ${(job.skills || []).length ? `<h3 style="margin-top:24px">Skills they ask for</h3><div class="chips" style="margin-top:10px">${job.skills.map((s) => `<span class="tag ${fit.matched.includes(norm(s)) ? 'tag-good' : ''}">${fit.matched.includes(norm(s)) ? ICON.check : ''}${escapeHTML(prettySkill(s))}</span>`).join('')}</div>` : ''}
+          ${fit.missing.length && hasPrefs(prefs) ? `<p class="soft small" style="margin-top:16px">Tip: if you've used ${escapeHTML(prettySkill(fit.missing[0]))} even in a small project, mention it — and add it in <a href="/app/preferences">Preferences</a> so Santa can match better.</p>` : ''}
         </div>
         <div class="tab-panel" data-panel="company" hidden>
-          <div class="brief-card"><h3>${ICON.sparkle} Santa's brief on ${escapeHTML(job.company)}</h3>
+          <div class="card brief-card" style="box-shadow:none"><h3>${ICON.sparkle} Santa's brief on ${escapeHTML(job.company)}</h3>
             <p class="prose" id="brief-text">A short read on the company, written from its own postings.</p>
             <button type="button" class="btn btn-secondary btn-sm" id="brief-btn" style="margin-top:12px">Read it for me</button>
           </div>
@@ -82,10 +85,21 @@ function render() {
 
       <aside class="detail-aside">
         <div class="card reveal">
-          ${deadline ? `<p class="small soft">Apply by</p><p class="countdown ${deadline.urgent ? '' : 'calm'}">${deadline.text}</p><p class="small muted">${new Date(job.deadline_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>`
-          : `<p class="small soft">Apply by</p><p class="countdown calm" style="font-size:1.1rem">No deadline listed</p><p class="small muted">Postings like this tend to fill fast — sooner is better.</p>`}
+          <div class="apply-by">
+            <span class="cal">${ICON.calendar}</span>
+            <div>
+              <p class="small soft">Apply by</p>
+              ${deadline ? `<p class="countdown ${deadline.urgent ? '' : 'calm'}">${deadline.text}</p><p class="small muted">${new Date(job.deadline_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>`
+              : '<p class="countdown calm">No deadline listed</p><p class="small muted">Postings like this fill fast — sooner is better.</p>'}
+            </div>
+          </div>
+          ${score != null && score > 0 ? `<div class="score-row"><span>Match Score</span><strong>${score}%</strong></div><div class="progress"><i data-w="${score}"></i></div>` : ''}
         </div>
-        ${score != null && score > 0 ? `<div class="card reveal"><div class="score-big"><span class="soft small">Match score</span><strong>${score}%</strong></div><div class="progress"><i data-w="${score}"></i></div></div>` : ''}
+        <div class="card brief-card reveal">
+          <h3>${ICON.sparkle} Santa's brief</h3>
+          <p class="soft small" id="aside-brief">Want the quick story on ${escapeHTML(job.company)} before you apply?</p>
+          <button type="button" class="btn btn-ghost btn-sm" id="aside-brief-btn" style="margin-top:8px;padding-left:0">Read it for me →</button>
+        </div>
         <div class="card reveal" id="track-card"></div>
       </aside>
     </div>
@@ -105,6 +119,14 @@ function render() {
     target.hidden = true;
     await loadBrief(job, target, briefBtn);
     if (!target.hidden) briefBtn.hidden = true;
+    target.hidden = false;
+  });
+  const asideBtn = document.getElementById('aside-brief-btn');
+  asideBtn.addEventListener('click', async () => {
+    const target = document.getElementById('aside-brief');
+    target.hidden = true;
+    await loadBrief(job, target, asideBtn);
+    if (!target.hidden) asideBtn.hidden = true;
     target.hidden = false;
   });
   renderTrack();
@@ -141,7 +163,7 @@ async function load() {
   const [result, loaded] = await Promise.all([fetchJSON(`/jobs/${JOB_ID}`), loadPrefs()]);
   prefs = loaded;
   if (!result.ok) {
-    root.innerHTML = `<div class="card empty"><img class="mascot" src="/static/assets/santa-icon-192.png" alt=""><h2>This posting has closed</h2><p>Santa removes postings once their application window passes. Plenty more where that came from!</p><a class="btn btn-primary" href="/app">Back to your feed</a></div>`;
+    root.innerHTML = `<div class="card empty"><img class="mascot" src="/static/assets/santa-mascot.svg" alt=""><h2>This posting has closed</h2><p>Santa removes postings once their application window passes. Plenty more where that came from!</p><a class="btn btn-primary" href="/app">Back to your feed</a></div>`;
     return;
   }
   job = result.data;

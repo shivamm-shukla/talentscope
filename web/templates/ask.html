@@ -4,16 +4,19 @@
 <section class="chat">
   <div class="chat-log" id="log" aria-live="polite">
     <div class="chat-intro" id="intro">
-      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-icon-192.png') }}" alt="" width="84" height="84">
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="130" height="114">
       <h1>Ask Santa ✨</h1>
-      <p class="soft">Your AI career companion — answers come from the live postings Santa is watching.</p>
+      <p class="soft">Your AI career companion. Answers come from the live postings Santa is watching.</p>
       <div class="suggestions" id="suggestions"></div>
     </div>
   </div>
   <form class="composer" id="composer">
-    <label class="sr-only" for="question">Ask Santa</label>
-    <textarea id="question" rows="1" placeholder="Ask anything about your career…" required></textarea>
-    <button type="submit" class="icon-btn" id="send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+    <button type="button" class="icon-btn plus" id="ideas" aria-label="Show suggestions" title="Ideas to ask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <div class="composer-box">
+      <label class="sr-only" for="question">Ask Santa</label>
+      <textarea id="question" rows="1" placeholder="Ask Santa anything…" required></textarea>
+      <button type="submit" class="icon-btn send" id="send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
   </form>
 </section>
 {% endblock %}
@@ -40,7 +43,7 @@ function bubble(role, text, sources) {
     row.textContent = text;
   } else {
     row.className = 'bubble-row';
-    row.innerHTML = `<img src="/static/assets/santa-icon-64.png" alt=""><div class="bubble santa"></div>`;
+    row.innerHTML = `<span class="mascot-bubble"><img src="/static/assets/santa-mascot.svg" alt=""></span><div class="bubble santa"></div>`;
     const b = row.querySelector('.bubble');
     if (text === null) b.innerHTML = '<span class="typing" aria-label="Santa is typing"><i></i><i></i><i></i></span>';
     else {
@@ -93,5 +96,9 @@ input.addEventListener('input', autosize);
 input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); } });
 
 history.forEach((m) => bubble(m.role, m.text, m.sources));
+document.getElementById('ideas').addEventListener('click', () => {
+  intro.hidden = false;
+  intro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
 </script>
 {% endblock %}

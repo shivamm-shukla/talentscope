@@ -5,13 +5,13 @@
 <main class="onboard">
   <section class="card onboard-card" aria-live="polite">
     <div class="onboard-top">
-      <a class="brand" href="{{ url_for('pages.index') }}"><img src="{{ url_for('static', filename='assets/santa-icon-64.png') }}" alt="Santa" width="32" height="32"></a>
-      <div class="steps-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+      <a class="brand" href="{{ url_for('pages.index') }}"><img src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="40" height="35"><span>Santa Scout</span></a>
       <div style="display:flex;gap:6px;align-items:center">
         {{ theme_toggle() }}
         <a class="btn btn-ghost btn-sm" href="{{ url_for('pages.dashboard') }}" id="skip-all">Skip setup</a>
       </div>
     </div>
+    <div class="steps-bar" aria-hidden="true"><i id="steps-fill"></i></div>
 
     <!-- Step 1 -->
     <div class="step is-on" data-step="0">
@@ -83,7 +83,7 @@
 
     <!-- Done -->
     <div class="step onboard-done" data-step="3">
-      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-icon-192.png') }}" alt="" width="110" height="110">
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="160" height="140">
       <h1 id="done-title">You're all set!</h1>
       <p id="done-text">Santa is already looking. Your feed is ready.</p>
       <div class="hero-actions" style="justify-content:center">
@@ -105,16 +105,14 @@
 {% block scripts %}
 <script>
 const SKILLS = ['python', 'javascript', 'react', 'java', 'sql', 'node.js', 'machine learning', 'data analysis', 'typescript', 'c++', 'django', 'flask', 'figma', 'excel'];
-const SKILL_LABELS = { 'node.js': 'Node.js', 'c++': 'C++', sql: 'SQL' };
 const CITIES = ['Remote', 'Bangalore', 'Hyderabad', 'Pune', 'Mumbai', 'Delhi', 'Gurgaon', 'Noida', 'Chennai'];
 const TYPES = [['internship', 'Internships'], ['job', 'Full-time jobs']];
 const MODES = [['remote', 'Remote'], ['hybrid', 'Hybrid'], ['onsite', 'In office']];
-const label = (s) => SKILL_LABELS[s] || s.replace(/\b\w/g, (c) => c.toUpperCase());
+const label = prettySkill;
 
 let prefs = emptyPrefs();
 let step = 0;
 const steps = document.querySelectorAll('.step');
-const bars = document.querySelectorAll('.steps-bar i');
 const nextBtn = document.getElementById('next-btn');
 const backBtn = document.getElementById('back-btn');
 const skipBtn = document.getElementById('skip-btn');
@@ -151,11 +149,11 @@ function render() {
 function show(index) {
   step = index;
   steps.forEach((el) => el.classList.toggle('is-on', Number(el.dataset.step) === index));
-  bars.forEach((bar, i) => bar.classList.toggle('is-done', i <= Math.min(index, 2)));
+  document.getElementById('steps-fill').style.width = `${(Math.min(index, 2) + 1) * 33.34}%`;
   backBtn.hidden = index === 0 || index === 3;
   document.getElementById('onboard-foot').hidden = index === 3;
   document.getElementById('skip-all').hidden = index === 3;
-  nextBtn.textContent = index === 2 ? 'Finish ✓' : 'Next →';
+  nextBtn.innerHTML = index === 2 ? 'Get Started ✓' : `Next ${ICON.arrow}`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

@@ -1,24 +1,25 @@
 {% extends "shell.html" %}
 {% block title %}Home — Santa{% endblock %}
+{% block banner %}<div class="banner" aria-hidden="true"></div>{% endblock %}
 {% block content %}
-<section class="greeting-hero">
+<section class="greeting">
   <div>
     <h1 id="greeting">Hello <span class="wave">👋</span></h1>
     <p id="greeting-sub">Here's what Santa found for you today.</p>
-    <span class="status-pill"><i></i>On the lookout</span>
   </div>
+  <span class="status-pill"><i></i>On the lookout</span>
+</section>
+
+<section class="tiles" id="tiles" aria-label="At a glance">
+  <div class="skeleton" style="min-height:130px"></div><div class="skeleton" style="min-height:130px"></div>
+  <div class="skeleton" style="min-height:130px"></div><div class="skeleton" style="min-height:130px"></div>
 </section>
 
 <section class="notes" id="notes" aria-label="Santa's notes"></section>
 
-<section class="tiles" id="tiles" aria-label="At a glance">
-  <div class="skeleton" style="min-height:120px"></div><div class="skeleton" style="min-height:120px"></div>
-  <div class="skeleton" style="min-height:120px"></div><div class="skeleton" style="min-height:120px"></div>
-</section>
-
 <section aria-label="Your feed">
   <div class="feed-toolbar">
-    <div class="segmented" role="tablist" id="tabs"></div>
+    <div class="tabs" role="tablist" id="tabs"></div>
     <div class="filters">
       <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input class="input" type="search" id="q" placeholder="Search role, company, skill" aria-label="Search jobs"></label>
@@ -105,7 +106,7 @@ function applyFilters(items) {
 }
 
 function emptyState(tab) {
-  const img = '<img class="mascot" src="/static/assets/santa-icon-192.png" alt="">';
+  const img = '<img class="mascot" src="/static/assets/santa-mascot.svg" alt="">';
   if ((tab === 'saved' || tab === 'applied') && !SANTA.auth) {
     return `<div class="card empty">${img}<h2>Your shortlist lives here</h2><p>Create a free account and every job you save or apply to shows up here — with reminders before deadlines.</p><button type="button" class="btn btn-primary" data-empty-signin>Create free account</button></div>`;
   }
