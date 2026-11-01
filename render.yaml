@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install ."
-    startCommand: "alembic upgrade head && gunicorn wsgi:app"
+    startCommand: "alembic upgrade head && gunicorn --timeout 60 wsgi:app"
     envVars:
       - key: SECRET_KEY
         generateValue: true

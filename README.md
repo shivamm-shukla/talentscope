@@ -157,7 +157,7 @@ A more detailed walkthrough of design decisions lives in [`ARCHITECTURE.md`](./A
 | Auth | Flask-Login + bcrypt | Standard, well-understood |
 | Email | Flask-Mail (Gmail SMTP) | Free tier, sufficient for cohort scale |
 | Telegram | python-telegram-bot | Free, students already use it |
-| AI | google-generativeai (Gemini) | Free tier sufficient for Q&A |
+| AI | google-genai (Gemini, HTTPS client) | Free tier sufficient for Q&A |
 | Testing | pytest, pytest-cov, pytest-flask, factory_boy, jsonschema | Industry-standard test stack |
 | CI | GitHub Actions | Free for public repos, runs on every push |
 | Logging | structlog (JSON) | Queryable logs — relevant to SDET log-analysis skills |
