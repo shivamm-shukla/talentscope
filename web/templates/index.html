@@ -1,9 +1,61 @@
 {% extends "public.html" %}
 {% block content %}
-<section class="hero" aria-labelledby="hero-title">
-  <svg class="hero-trail" viewBox="0 0 1200 700" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M-20 560 C 260 500, 460 540, 680 420 S 1000 150, 1240 110" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.6"/>
-  </svg>
+<section class="hero" id="hero" aria-labelledby="hero-title">
+  <div class="hero-scene" aria-hidden="true">
+    <div class="sky layer" style="--depth:4">
+      <i class="aurora a1"></i><i class="aurora a2"></i><i class="aurora a3"></i>
+      <i class="stars"></i>
+    </div>
+    <svg class="hills hills-far layer" style="--depth:8" viewBox="0 0 1440 420" preserveAspectRatio="none">
+      <defs><linearGradient id="hg-far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--hill-far-1)"/><stop offset="1" style="stop-color:var(--hill-far-2)"/></linearGradient></defs>
+      <path d="M0 250 C 120 200 220 150 330 175 C 450 205 520 120 640 110 C 760 100 820 180 930 170 C 1060 158 1130 90 1250 100 C 1340 108 1400 150 1440 160 L1440 420 L0 420 Z" fill="url(#hg-far)"/>
+    </svg>
+    <div class="mascot-stage layer" style="--depth:16">
+      <i class="halo"></i>
+      <svg class="hero-mascot" viewBox="0 0 128 112" id="hero-mascot">
+        <defs>
+          <radialGradient id="hm-body" cx="42%" cy="34%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#fbf8ff"/><stop offset="1" stop-color="#ddd3f6"/></radialGradient>
+          <radialGradient id="hm-warm" cx="20%" cy="85%" r="65%"><stop offset="0" stop-color="#ffd2b8" stop-opacity="0.85"/><stop offset="1" stop-color="#ffd2b8" stop-opacity="0"/></radialGradient>
+          <linearGradient id="hm-hat" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a5c"/><stop offset="0.55" stop-color="#e5322f"/><stop offset="1" stop-color="#a8141c"/></linearGradient>
+          <radialGradient id="hm-pom" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e4def4"/></radialGradient>
+        </defs>
+        <path d="M18 74 C 18 46, 38 30, 62 30 C 88 30, 106 46, 106 74 C 106 94, 88 104, 62 104 C 36 104, 18 94, 18 74 Z" fill="url(#hm-body)"/>
+        <path d="M18 74 C 18 46, 38 30, 62 30 C 88 30, 106 46, 106 74 C 106 94, 88 104, 62 104 C 36 104, 18 94, 18 74 Z" fill="url(#hm-warm)"/>
+        <g class="hm-eyes" fill="none" stroke="#2a2340" stroke-width="4.2" stroke-linecap="round">
+          <g class="hm-blink"><path d="M42 72 q7 -8 14 0"/><path d="M70 72 q7 -8 14 0"/></g>
+        </g>
+        <g class="hm-cheeks" fill="#ff9aa8" opacity="0.35"><ellipse cx="40" cy="84" rx="6" ry="3.5"/><ellipse cx="88" cy="84" rx="6" ry="3.5"/></g>
+        <g class="hm-hat">
+          <path d="M20 58 C 22 32, 44 14, 70 14 C 92 14, 108 26, 114 44 C 116 50, 114 56, 110 58 C 104 48, 94 42, 82 40 C 62 37, 38 44, 20 58 Z" fill="url(#hm-hat)"/>
+          <path d="M30 46 C 44 30, 64 22, 84 24" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="111" cy="60" r="10" fill="url(#hm-pom)"/>
+        </g>
+      </svg>
+      <div class="speech" role="presentation"><b>Hi! 👋</b> I found you <b>3 new matches</b> today.</div>
+    </div>
+    <svg class="hills hills-near layer" style="--depth:24" viewBox="0 0 1440 420" preserveAspectRatio="none">
+      <defs><linearGradient id="hg-near" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--hill-near-1)"/><stop offset="1" style="stop-color:var(--hill-near-2)"/></linearGradient></defs>
+      <path d="M0 300 C 180 250 330 300 520 285 C 700 270 800 225 960 240 C 1110 255 1210 300 1330 292 C 1390 288 1420 280 1440 276 L1440 420 L0 420 Z" fill="url(#hg-near)"/>
+      <path d="M0 300 C 180 250 330 300 520 285 C 700 270 800 225 960 240 C 1110 255 1210 300 1330 292 C 1390 288 1420 280 1440 276" fill="none" style="stroke:var(--hill-rim)" stroke-width="2.5"/>
+    </svg>
+    <svg class="hero-trail" viewBox="0 0 1200 700" preserveAspectRatio="none">
+      <path d="M-20 600 C 260 540, 470 560, 690 440 S 1010 150, 1240 100" fill="none" style="stroke:var(--trail)" stroke-width="1.6"/>
+      <path d="M-20 640 C 300 600, 520 600, 740 470 S 1060 210, 1240 170" fill="none" style="stroke:var(--trail)" stroke-width="1" opacity="0.6"/>
+    </svg>
+    <div class="float layer fc-match" style="--depth:34">
+      <div class="float-card"><span class="logo-tile logo-tile-sm" style="--a1:#4285f4;--a2:#34a853"><span>G</span></span>
+        <div><strong>ML Intern</strong><small>Groww · Bengaluru</small></div><span class="match-pill">96% Match</span></div>
+    </div>
+    <div class="float layer fc-nudge" style="--depth:40">
+      <div class="float-card"><span class="fc-icon warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <div><strong>Razorpay closes tomorrow</strong><small>You saved it — apply tonight?</small></div></div>
+    </div>
+    <div class="float layer fc-done" style="--depth:30">
+      <div class="float-card"><span class="fc-icon good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+        <div><strong>Applied ✓</strong><small>I'll watch for replies</small></div></div>
+    </div>
+  </div>
+
   <div class="hero-copy">
     <span class="hero-eyebrow">Meet Santa ✨</span>
     <h1 id="hero-title">Your career, sorted <span class="grad-text">before you ask.</span></h1>
@@ -103,4 +155,36 @@
     </div>
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+<script>
+// Hero: depth parallax on pointer move, and Santa's eyes follow the cursor.
+(function () {
+  const hero = document.getElementById('hero');
+  const eyes = document.querySelector('#hero-mascot .hm-eyes');
+  const mascot = document.getElementById('hero-mascot');
+  if (!hero || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let frame = null;
+  hero.addEventListener('pointermove', (event) => {
+    if (event.pointerType !== 'mouse' || frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      const rect = hero.getBoundingClientRect();
+      hero.style.setProperty('--px', ((event.clientX - rect.left) / rect.width - 0.5).toFixed(3));
+      hero.style.setProperty('--py', ((event.clientY - rect.top) / rect.height - 0.5).toFixed(3));
+      const m = mascot.getBoundingClientRect();
+      const dx = event.clientX - (m.left + m.width / 2);
+      const dy = event.clientY - (m.top + m.height * 0.62);
+      const dist = Math.hypot(dx, dy) || 1;
+      const reach = Math.min(1, dist / 260) * 3.2;
+      eyes.style.transform = `translate(${(dx / dist) * reach}px, ${(dy / dist) * reach * 0.8}px)`;
+    });
+  });
+  hero.addEventListener('pointerleave', () => {
+    hero.style.setProperty('--px', 0);
+    hero.style.setProperty('--py', 0);
+    eyes.style.transform = '';
+  });
+})();
+</script>
 {% endblock %}

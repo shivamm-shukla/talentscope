@@ -76,6 +76,21 @@
 
   --art-filter: none;
 
+  /* Hero scene (vector, so each theme gets its own sky — not a dimmed photo) */
+  --sky: linear-gradient(180deg, #c9b8f5 0%, #dcc6f3 32%, #f3d2e8 62%, #fddcd0 85%, #fee6d6 100%);
+  --aurora-1: rgba(255, 170, 205, 0.75);
+  --aurora-2: rgba(160, 140, 250, 0.7);
+  --aurora-3: rgba(255, 205, 165, 0.75);
+  --halo: radial-gradient(circle, rgba(255, 246, 232, 0.95) 0%, rgba(255, 220, 200, 0.55) 35%, rgba(255, 200, 220, 0) 70%);
+  --hill-far-1: #b4a0ee;
+  --hill-far-2: #8b7bd6;
+  --hill-near-1: #fdf1f6;
+  --hill-near-2: #d3c3f3;
+  --hill-rim: rgba(255, 255, 255, 0.85);
+  --trail: rgba(255, 255, 255, 0.85);
+  --stars-opacity: 0;
+  --copy-veil: linear-gradient(90deg, rgba(255, 248, 252, 0.55), rgba(255, 248, 252, 0) 55%);
+
   --radius-xs: 10px;
   --radius-sm: 14px;
   --radius-md: 18px;
@@ -152,6 +167,20 @@
 
   /* Artwork is bright by nature — dim and cool it at night. */
   --art-filter: brightness(0.6) saturate(0.85) hue-rotate(-8deg);
+
+  --sky: linear-gradient(180deg, #120f2a 0%, #1b1640 38%, #2c1f4f 70%, #3d2650 100%);
+  --aurora-1: rgba(150, 70, 170, 0.35);
+  --aurora-2: rgba(90, 80, 220, 0.42);
+  --aurora-3: rgba(60, 120, 200, 0.25);
+  --halo: radial-gradient(circle, rgba(200, 185, 255, 0.42) 0%, rgba(150, 120, 240, 0.18) 38%, rgba(120, 90, 220, 0) 70%);
+  --hill-far-1: #3d3080;
+  --hill-far-2: #2a2259;
+  --hill-near-1: #4d3d8c;
+  --hill-near-2: #2b2257;
+  --hill-rim: rgba(215, 200, 255, 0.45);
+  --trail: rgba(210, 195, 255, 0.45);
+  --stars-opacity: 0.9;
+  --copy-veil: linear-gradient(90deg, rgba(18, 15, 42, 0.55), rgba(18, 15, 42, 0) 55%);
 }
 
 /* =========================================================================
@@ -419,16 +448,14 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .hero {
   position: relative; overflow: hidden; isolation: isolate;
   border-radius: var(--radius-xl);
-  min-height: clamp(540px, 78vh, 700px);
+  min-height: clamp(560px, 80vh, 720px);
   display: flex; align-items: center;
   padding: clamp(28px, 5vw, 72px);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-lg);
+  --px: 0; --py: 0;
 }
-.hero::before { content: ""; position: absolute; inset: 0; z-index: -2; background: #cdbdf3 url("../assets/santa-hero.webp") 75% 100% / cover no-repeat; filter: var(--art-filter); }
-.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(255, 245, 250, 0.72), rgba(255, 245, 250, 0.25) 48%, transparent 70%); }
-:root[data-theme="dark"] .hero::after { background: linear-gradient(90deg, rgba(20, 17, 40, 0.86), rgba(20, 17, 40, 0.45) 50%, rgba(20, 17, 40, 0.1) 75%); }
-.hero-copy { max-width: 560px; min-width: 0; }
+.hero-copy { position: relative; z-index: 5; max-width: 540px; min-width: 0; }
 .hero h1 { font-size: clamp(2.3rem, 1.4rem + 4.2vw, 4.4rem); line-height: 1.03; letter-spacing: -0.045em; font-weight: 800; }
 .hero p { margin-top: 20px; font-size: clamp(1rem, 0.95rem + 0.3vw, 1.14rem); color: var(--ink-2); max-width: 470px; }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 30px; }
@@ -438,15 +465,102 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .play-link span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--glass-strong); box-shadow: var(--shadow-sm); transition: transform 0.25s var(--spring); }
 .play-link:hover span { transform: scale(1.08); }
 .play-link svg { width: 14px; height: 14px; margin-left: 2px; }
-.hero-trail { position: absolute; inset: 0; z-index: -1; pointer-events: none; width: 100%; height: 100%; }
-.hero-trail path { stroke-dasharray: 1600; stroke-dashoffset: 1600; animation: trail 3.4s var(--ease) 0.3s forwards; }
-@media (max-width: 640px) {
-  .hero { flex-direction: column; justify-content: flex-start; align-items: stretch; min-height: 0; padding: 28px 22px 260px; }
-  .hero::before { background-size: auto 300px; background-position: 78% 100%; }
-  .hero::after { background: linear-gradient(180deg, rgba(255, 245, 250, 0.85), rgba(255, 245, 250, 0.4) 55%, transparent 75%); }
-  :root[data-theme="dark"] .hero::after { background: linear-gradient(180deg, rgba(20, 17, 40, 0.92), rgba(20, 17, 40, 0.45) 60%, rgba(20, 17, 40, 0.1)); }
+
+/* ---- The scene: sky → far hills → Santa → near hills → floating cards.
+   Each .layer shifts with the pointer by its --depth for parallax. */
+.hero-scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: var(--sky); }
+.hero-scene::after { content: ""; position: absolute; inset: 0; background: var(--copy-veil); z-index: 4; }
+.layer { transform: translate3d(calc(var(--px) * var(--depth) * -1px), calc(var(--py) * var(--depth) * -0.6px), 0); transition: transform 0.6s var(--ease); will-change: transform; }
+.sky { position: absolute; inset: -40px; }
+.aurora { position: absolute; border-radius: 50%; filter: blur(60px); animation: drift 18s ease-in-out infinite alternate; }
+.a1 { width: 46%; height: 60%; left: 30%; top: -10%; background: var(--aurora-1); }
+.a2 { width: 50%; height: 70%; right: -10%; top: -20%; background: var(--aurora-2); animation-duration: 22s; animation-direction: alternate-reverse; }
+.a3 { width: 40%; height: 50%; left: -8%; top: 30%; background: var(--aurora-3); animation-duration: 26s; }
+.stars {
+  position: absolute; inset: 0; opacity: var(--stars-opacity); transition: opacity 0.6s;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent 60%), radial-gradient(1px 1px at 28% 8%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 44% 26%, #fff, transparent 60%), radial-gradient(1px 1px at 63% 12%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 78% 22%, #fff, transparent 60%), radial-gradient(1px 1px at 88% 9%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 55% 40%, #fff, transparent 60%), radial-gradient(1.5px 1.5px at 18% 44%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 93% 38%, #fff, transparent 60%), radial-gradient(1px 1px at 36% 52%, #fff, transparent 60%);
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+.hills { position: absolute; left: -40px; right: -40px; bottom: -2px; width: calc(100% + 80px); }
+.hills-far { height: 66%; z-index: 1; }
+.hills-near { height: 44%; z-index: 3; filter: drop-shadow(0 -6px 18px rgba(108, 71, 224, 0.12)); }
+/* Santa sits low so the near hills hide his lower half — peeking over, as in
+   the reference art. */
+.mascot-stage { position: absolute; z-index: 2; right: 15%; bottom: 9%; width: clamp(240px, 27vw, 380px); aspect-ratio: 128 / 112; }
+.mascot-stage .halo { position: absolute; inset: -55%; background: var(--halo); animation: breathe 6s ease-in-out infinite; }
+.hero-mascot { position: relative; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 18px 40px rgba(108, 71, 224, 0.28)); animation: rise-up 1.4s var(--spring) 0.2s both; }
+:root[data-theme="dark"] .hero-mascot { filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.45)) brightness(0.94); }
+.hm-eyes { transition: transform 0.25s var(--ease); }
+.hm-blink { transform-origin: 64px 70px; animation: blink 5s infinite 2s; }
+.hm-hat { transform-origin: 40px 48px; animation: sway 6s ease-in-out infinite 1.6s; }
+.speech {
+  position: absolute; left: -6%; top: -30%; z-index: 6; width: max-content; max-width: 210px;
+  padding: 11px 14px; border-radius: 16px 16px 4px 16px;
+  background: var(--glass-strong); border: 1px solid var(--glass-border); box-shadow: var(--shadow-md);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  font-size: 0.82rem; line-height: 1.4; color: var(--ink-2);
+  animation: pop-in 0.6s var(--spring) 1.6s both;
+}
+.speech b { color: var(--ink); }
+.hero-trail { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; }
+.hero-trail path { stroke-dasharray: 1600; stroke-dashoffset: 1600; animation: trail 3.4s var(--ease) 0.4s forwards; }
+.float { position: absolute; z-index: 5; }
+.float-card {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px;
+  background: var(--glass-strong); border: 1px solid var(--glass-border); box-shadow: var(--shadow-md);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  white-space: nowrap; animation: bob 6s ease-in-out infinite;
+}
+.float-card strong { display: block; font-size: 0.82rem; color: var(--ink); }
+.float-card small { display: block; font-size: 0.72rem; color: var(--muted); }
+.float-card .match-pill { font-size: 0.72rem; padding: 4px 9px; }
+.fc-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; flex: none; }
+.fc-icon svg { width: 16px; height: 16px; }
+.fc-icon.warn { background: var(--warn-soft); color: var(--warn); }
+.fc-icon.good { background: var(--good-soft); color: var(--good); }
+.fc-match { right: 3%; top: 9%; }
+.fc-match .float-card { animation-delay: -1s; }
+.fc-nudge { right: 2%; bottom: 33%; }
+.fc-nudge .float-card { animation-delay: -3s; }
+.fc-done { right: 40%; bottom: 7%; }
+.fc-done .float-card { animation-delay: -4.5s; }
+.fc-match { animation: pop-in 0.7s var(--spring) 0.9s both; }
+.fc-nudge { animation: pop-in 0.7s var(--spring) 1.2s both; }
+.fc-done { animation: pop-in 0.7s var(--spring) 1.5s both; }
+@keyframes drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(6%, 8%) scale(1.15); } }
+@keyframes twinkle { from { opacity: calc(var(--stars-opacity) * 0.55); } to { opacity: var(--stars-opacity); } }
+@keyframes breathe { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes rise-up { from { transform: translateY(55%); } to { transform: none; } }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.12); } }
+@keyframes sway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-4deg); } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+/* Uses the independent translate/scale properties so it composes with the
+   parallax transform on .layer instead of overriding it. */
+@keyframes pop-in { from { opacity: 0; translate: 0 14px; scale: 0.9; } to { opacity: 1; translate: 0 0; scale: 1; } }
+@media (max-width: 1100px) {
+  .mascot-stage { right: 8%; }
+  .fc-done { display: none; }
+  .fc-nudge { display: none; }
+}
+@media (max-width: 860px) {
+  .hero { flex-direction: column; justify-content: flex-start; align-items: stretch; min-height: 0; padding: 30px 22px 330px; }
+  .hero-scene::after { background: linear-gradient(180deg, var(--copy-veil-mobile, rgba(255, 248, 252, 0.6)), transparent 55%); }
+  :root[data-theme="dark"] .hero-scene::after { --copy-veil-mobile: rgba(18, 15, 42, 0.6); }
+  .hills-far { height: 46%; }
+  .hills-near { height: 26%; }
+  .mascot-stage { right: 50%; bottom: 5%; width: 230px; }
+  .mascot-stage.layer { transform: translateX(42%); }
+  /* Centred with auto margins: the pop-in animation owns `translate`. */
+  .speech { left: -30%; right: -30%; margin: 0 auto; top: -26%; max-width: min(240px, 78vw); font-size: 0.78rem; border-radius: 16px; }
+  .fc-match, .fc-nudge { display: none; }
   .hero-actions .btn { flex: 1 1 auto; }
 }
+@media (max-width: 420px) { .hero { padding-bottom: 310px; } .mascot-stage { width: 210px; } }
 
 .trio { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
 .trio-item { display: flex; gap: 14px; align-items: flex-start; padding: 18px; }
