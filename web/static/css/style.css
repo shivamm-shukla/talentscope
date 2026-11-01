@@ -1187,3 +1187,30 @@ a.tile:hover { color: inherit; }
   .tabs button { padding: 8px 12px; font-size: 0.86rem; }
   .filters { padding-bottom: 6px; }
 }
+
+
+/* =========================================================================
+   Two-level scrolling (Home, Applications). The right pane itself scrolls,
+   so wheeling over the header (greeting, stats, notes) slides it away; the
+   list panel is sticky and exactly one pane tall, so wheeling over the list
+   scrolls only the list. At the list's top, scrolling up chains back to the
+   pane and brings the header back. --pane-h is the pane's height (set by
+   app.js, so it's right under the phone top bar too).
+   ========================================================================= */
+.main.two-level { overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: none; }
+.main.two-level::-webkit-scrollbar { display: none; }
+.main.two-level .main-inner, .main.two-level .fill { display: block; flex: none; }
+.main.two-level .sticky-panel {
+  position: sticky; top: 0; z-index: 2;
+  height: var(--pane-h, 100dvh);
+  display: flex; flex-direction: column;
+  padding-top: 12px;
+}
+.main.two-level .sticky-panel > * { flex: none; }
+.main.two-level .sticky-panel > .page-scroll { flex: 1 1 auto; min-height: 0; overscroll-behavior-y: auto; }
+.main.two-level .board {
+  position: sticky; top: 0; z-index: 2;
+  height: var(--pane-h, 100dvh);
+  padding-top: 12px;
+}
+.main.two-level .column-body { overscroll-behavior-y: auto; }

@@ -629,4 +629,14 @@ function renderJobCard(item, prefs) {
   return card;
 }
 
+// Two-level pages: the sticky list panel must be exactly one pane tall.
+(function syncPaneHeight() {
+  const pane = document.querySelector('.main.two-level');
+  if (!pane) return;
+  const set = () => pane.style.setProperty('--pane-h', `${pane.clientHeight}px`);
+  set();
+  if ('ResizeObserver' in window) new ResizeObserver(set).observe(pane);
+  else window.addEventListener('resize', set);
+})();
+
 updateShellUser();

@@ -1,5 +1,6 @@
 {% extends "shell.html" %}
 {% block title %}Home — Santa{% endblock %}
+{% block main_mod %}two-level{% endblock %}
 {% block banner %}<div class="banner" aria-hidden="true"></div>{% endblock %}
 {% block content %}
 <section class="greeting">
@@ -17,6 +18,7 @@
 
 <section class="notes strip" id="notes" aria-label="Santa's notes"></section>
 
+<div class="sticky-panel">
 <section aria-label="Your feed" class="feed-head">
   <div class="feed-toolbar">
     <div class="tabs" role="tablist" id="tabs"></div>
@@ -35,6 +37,7 @@
     <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
   </div>
   <div class="load-more"><button type="button" class="btn btn-secondary" id="more" hidden>Show more</button></div>
+</div>
 </div>
 {% endblock %}
 {% block scripts %}

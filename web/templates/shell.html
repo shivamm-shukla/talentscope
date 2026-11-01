@@ -56,7 +56,7 @@
     </div>
   </header>
 
-  <main class="main" id="main">
+  <main class="main {% block main_mod %}{% endblock %}" id="main">
     {% block banner %}{% endblock %}
     <div class="main-inner page-enter">
       {% block content %}{% endblock %}
