@@ -8,16 +8,32 @@ from core.models import Answer, JobPosting, QueryContext
 
 GenerateFn = Callable[[str], str]
 
+# Comfortably under gunicorn's worker timeout, so a slow or stuck call fails
+# as a normal error (502 to the user) instead of the worker being killed.
+GEMINI_TIMEOUT_MS = 25_000
+
 
 def gemini_generate(api_key: str, model: str) -> GenerateFn:
-    """Build a generate function that calls the real Gemini API on demand."""
+    """Build a generate function that calls the real Gemini API on demand.
+
+    Uses the `google-genai` SDK (plain HTTPS). The old `google-generativeai`
+    SDK is end-of-life and talked gRPC, which hung on Render until gunicorn
+    killed the worker — every AI feature failed with no response.
+    """
+    client = None
 
     def generate(prompt: str) -> str:
-        import google.generativeai as genai
+        nonlocal client
+        if client is None:
+            from google import genai
+            from google.genai import types
 
-        genai.configure(api_key=api_key)
-        response = genai.GenerativeModel(model).generate_content(prompt)
-        return response.text
+            client = genai.Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
+            )
+        response = client.models.generate_content(model=model, contents=prompt)
+        return response.text or ""
 
     return generate
 

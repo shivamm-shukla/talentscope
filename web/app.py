@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+from dotenv import load_dotenv
 from flask import Flask
 from flask_login import LoginManager
 
@@ -15,6 +16,10 @@ from web.routes import api
 
 
 def create_app(config: dict[str, object] | None = None) -> Flask:
+    # Local runs read secrets (GEMINI_API_KEY, SMTP_*, ...) from .env, as the
+    # README's setup describes. Real environment variables always win, so
+    # Render/GitHub Actions configuration is unaffected.
+    load_dotenv(override=False)
     configure_json_logging()
     app = Flask(__name__)
     app.config.from_mapping(

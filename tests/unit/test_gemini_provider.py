@@ -68,3 +68,30 @@ def test_gemini_engine_handles_empty_job_context() -> None:
 
     assert answer.text == "No jobs yet."
     assert answer.sources == ()
+
+
+def test_gemini_generate_uses_http_client_with_timeout(monkeypatch) -> None:
+    """The real generate fn goes through google-genai's HTTP client with a
+    timeout below gunicorn's, and builds the client once, not per call."""
+    from google import genai
+
+    from ai.providers import gemini
+
+    created = []
+
+    class FakeModels:
+        def generate_content(self, *, model, contents):
+            return type("Resp", (), {"text": f"{model}:{contents}"})()
+
+    class FakeClient:
+        def __init__(self, *, api_key, http_options):
+            created.append((api_key, http_options.timeout))
+            self.models = FakeModels()
+
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    generate = gemini.gemini_generate("key-123", "gemini-flash-latest")
+
+    assert generate("hello") == "gemini-flash-latest:hello"
+    assert generate("again") == "gemini-flash-latest:again"
+    assert created == [("key-123", gemini.GEMINI_TIMEOUT_MS)]
+    assert gemini.GEMINI_TIMEOUT_MS < 60_000

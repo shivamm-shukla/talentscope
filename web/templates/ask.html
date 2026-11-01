@@ -83,7 +83,9 @@ async function ask(question) {
   const result = await fetchJSON('/qa', { method: 'POST', body: JSON.stringify({ question }) });
   send.disabled = false;
   pending.remove();
-  const text = result.ok ? result.data.text : ((result.data && result.data.error) ? 'I couldn’t answer that just now — give me a moment and try again.' : 'Something went wrong on my side. Try again?');
+  const text = result.ok ? result.data.text
+    : result.status === 503 ? `${result.data.error} Ask whoever runs this Santa to add the key.`
+    : 'I couldn’t answer that just now — give me a moment and try again.';
   const sources = result.ok ? result.data.sources : [];
   bubble('santa', text, sources);
   history.push({ role: 'santa', text, sources });
