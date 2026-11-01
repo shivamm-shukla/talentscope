@@ -548,7 +548,9 @@ async function loadBrief(job, target, button) {
   const result = await fetchJSON(`/jobs/${job.id}/brief`);
   button.disabled = false;
   button.textContent = label;
-  target.textContent = result.ok ? result.data.content : 'Santa couldn’t read up on this company right now — try again in a bit.';
+  target.textContent = result.ok ? result.data.content
+    : result.status === 503 ? result.data.error
+    : 'Santa couldn’t read up on this company right now — try again in a bit.';
   target.hidden = false;
 }
 

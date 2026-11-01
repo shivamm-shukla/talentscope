@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ai.company_brief_prompt import generate_company_brief
-from ai.registry import create_generate_fn, create_qa_engine
+from ai.registry import AIUnavailable, create_generate_fn, create_qa_engine
 from ai.resume_prompt import generate_resume_content
 from analysis.classify import LISTING_TYPES, WORK_MODES
 from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
@@ -54,6 +54,10 @@ from integrations.linkedin.parser import (
 )
 
 api = Blueprint("api", __name__)
+
+AI_UNAVAILABLE_MESSAGE = (
+    "Santa's AI isn't set up on this server yet — GEMINI_API_KEY is missing."
+)
 
 
 def _session() -> Session:
@@ -442,6 +446,9 @@ def qa():
     context = QueryContext(user=domain_user, jobs=jobs)
     try:
         answer = _qa_engine().answer(question, context)
+    except AIUnavailable:
+        current_app.logger.warning("QA requested but AI is not configured")
+        return jsonify(error=AI_UNAVAILABLE_MESSAGE), 503
     except Exception:
         current_app.logger.exception("QA engine failed to answer question")
         return jsonify(error="unable to answer question right now"), 502
@@ -662,6 +669,8 @@ def job_brief(job_id: int):
         ]
         try:
             content = generate_company_brief(_generate_fn(), job.company, descriptions)
+        except AIUnavailable:
+            return jsonify(error=AI_UNAVAILABLE_MESSAGE), 503
         except Exception:
             current_app.logger.exception("company brief generation failed")
             return jsonify(error="unable to generate a brief right now"), 502
@@ -693,6 +702,8 @@ def resume_generate():
             content = generate_resume_content(
                 _generate_fn(), user.name or user.email, sections
             )
+        except AIUnavailable:
+            return jsonify(error=AI_UNAVAILABLE_MESSAGE), 503
         except Exception:
             current_app.logger.exception("resume generation failed")
             return jsonify(error="unable to generate resume right now"), 502
