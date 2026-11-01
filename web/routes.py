@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from ai.company_brief_prompt import generate_company_brief
 from ai.registry import create_generate_fn, create_qa_engine
 from ai.resume_prompt import generate_resume_content
+from analysis.classify import LISTING_TYPES, WORK_MODES
 from analysis.linkedin_skills import infer_skills as infer_linkedin_skills
 from analysis.outcomes import compute_outcome_stats
 from analysis.resume_builder import build_resume_draft
@@ -130,6 +131,8 @@ def _preference_payload(
         "locations": [],
         "minimum_stipend": None,
         "channels": [],
+        "work_modes": [],
+        "listing_types": [],
         "name": name,
         "telegram_chat_id": telegram_chat_id,
         "github_username": github_username,
@@ -144,6 +147,8 @@ def _preference_payload(
         "locations": preferences.locations,
         "minimum_stipend": preferences.minimum_stipend,
         "channels": preferences.preferred_channels,
+        "work_modes": preferences.work_modes,
+        "listing_types": preferences.listing_types,
     }
 
 
@@ -231,6 +236,9 @@ def me():
     return jsonify(id=current_user.id, email=current_user.email, name=current_user.name)
 
 
+ALLOWED_PREFERENCE_VALUES = {"work_modes": WORK_MODES, "listing_types": LISTING_TYPES}
+
+
 @api.route("/preferences", methods=["GET", "PUT"])
 @login_required
 def preferences():
@@ -256,12 +264,20 @@ def preferences():
             ("skills", "skills"),
             ("locations", "locations"),
             ("channels", "preferred_channels"),
+            ("work_modes", "work_modes"),
+            ("listing_types", "listing_types"),
         ):
             if key in payload:
                 if not isinstance(payload[key], list) or not all(
                     isinstance(item, str) for item in payload[key]
                 ):
                     return jsonify(error=f"{key} must be a list of strings"), 400
+                allowed = ALLOWED_PREFERENCE_VALUES.get(key)
+                if allowed and not set(payload[key]) <= set(allowed):
+                    return (
+                        jsonify(error=f"{key} must be drawn from {list(allowed)}"),
+                        400,
+                    )
                 setattr(preference, attribute, payload[key])
         if "minimum_stipend" in payload:
             value = payload["minimum_stipend"]
@@ -514,6 +530,20 @@ def applications_update(application_id: int):
             application.notes = notes
         session.commit()
         return jsonify(_application_payload(application))
+
+
+@api.delete("/applications/<int:application_id>")
+@login_required
+def applications_delete(application_id: int):
+    """Stop tracking a job entirely (un-save). Its deadline-reminder records
+    go with it via the cascade."""
+    with _session() as session:
+        application = _owned_application(session, application_id)
+        if application is None:
+            return jsonify(error="application not found"), 404
+        session.delete(application)
+        session.commit()
+        return "", 204
 
 
 @api.get("/jobs/<int:job_id>")

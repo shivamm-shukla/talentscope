@@ -14,6 +14,9 @@ from datetime import datetime, timedelta, timezone
 from analysis.skill_extractor import KNOWN_SKILLS
 from core.models import JobPosting
 
+LISTING_TYPES = ("internship", "job")
+WORK_MODES = ("remote", "hybrid", "onsite")
+
 CS_KEYWORDS = (
     "software",
     "developer",

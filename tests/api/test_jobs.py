@@ -151,3 +151,18 @@ def test_signup_name_is_stored_and_editable(client) -> None:
 
     assert client.get("/auth/me").get_json()["name"] == "Aarav S"
     assert client.put("/preferences", json={"name": 5}).status_code == 400
+
+
+def test_preferences_store_work_modes_and_listing_types(client) -> None:
+    signup(client)
+
+    saved = client.put(
+        "/preferences",
+        json={"work_modes": ["remote", "hybrid"], "listing_types": ["internship"]},
+    )
+
+    assert saved.status_code == 200
+    body = client.get("/preferences").get_json()
+    assert body["work_modes"] == ["remote", "hybrid"]
+    assert body["listing_types"] == ["internship"]
+    assert client.put("/preferences", json={"work_modes": ["moon"]}).status_code == 400

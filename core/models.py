@@ -47,6 +47,8 @@ class UserPreferences:
     locations: tuple[str, ...] = ()
     minimum_stipend: int | None = None
     channels: tuple[str, ...] = ()
+    work_modes: tuple[str, ...] = ()
+    listing_types: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

@@ -69,6 +69,8 @@ def test_login_logout_and_preference_crud(client) -> None:
         "locations": ["Remote"],
         "minimum_stipend": 12000,
         "channels": ["email", "telegram"],
+        "work_modes": [],
+        "listing_types": [],
         "name": "",
         "telegram_chat_id": "1333041980",
         "github_username": "octocat",
