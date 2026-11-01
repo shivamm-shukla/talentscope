@@ -5,7 +5,7 @@
   <div><h1>My Applications</h1><p>Everything you're chasing, in one calm place. Drag a card — or use its menu — to move it.</p></div>
   <a class="icon-btn" href="{{ url_for('pages.dashboard') }}" aria-label="Find more jobs" title="Find more jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>
 </div>
-<div id="root"><div class="skeleton" style="min-height:110px;margin-bottom:16px"></div><div class="skeleton" style="min-height:320px"></div></div>
+<div id="root" class="fill"><div class="skeleton" style="min-height:90px;margin-bottom:14px"></div><div class="skeleton" style="flex:1"></div></div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -32,22 +32,25 @@ function card(app) {
 
 function render() {
   if (!SANTA.auth) {
-    root.innerHTML = `<div class="card locked"><img class="mascot mascot-float" src="/static/assets/santa-mascot.svg" alt="" width="140"><h2>Your application board lives here</h2><p>Save jobs and mark what you've applied to — Santa tracks replies, reminds you before deadlines, and tells you when it's time to follow up.</p><button type="button" class="btn btn-primary" id="signin">Create free account</button><a class="btn btn-ghost" href="/app">Browse jobs first</a></div>`;
+    root.innerHTML = `<div class="page-scroll"><div class="card locked"><img class="mascot mascot-float" src="/static/assets/santa-mascot.svg" alt="" width="140"><h2>Your application board lives here</h2><p>Save jobs and mark what you've applied to — Santa tracks replies, reminds you before deadlines, and tells you when it's time to follow up.</p><button type="button" class="btn btn-primary" id="signin">Create free account</button><a class="btn btn-ghost" href="/app">Browse jobs first</a></div></div>`;
     root.querySelector('#signin').addEventListener('click', () => requireAccount('Create a free account to start your application board.'));
     return;
   }
   const by = (s) => apps.filter((a) => a.status === s);
   const closed = apps.filter((a) => ['rejected', 'withdrawn'].includes(a.status));
   root.innerHTML = `
-    <section class="stats-row" id="stats"></section>
-    ${!apps.length ? `<div class="card empty"><img class="mascot" src="/static/assets/santa-mascot.svg" alt=""><h2>No applications yet</h2><p>Save a job or hit Apply on one — it lands here automatically.</p><a class="btn btn-primary" href="/app">Explore your feed</a></div>` : `
+    <section class="stats-row strip" id="stats"></section>
+    ${!apps.length ? `<div class="page-scroll"><div class="card empty"><img class="mascot" src="/static/assets/santa-mascot.svg" alt=""><h2>No applications yet</h2><p>Save a job or hit Apply on one — it lands here automatically.</p><a class="btn btn-primary" href="/app">Explore your feed</a></div></div>` : `
     <section class="board" aria-label="Application board">
       ${COLUMNS.map((s) => `<div class="column" data-col="${s}">
         <div class="column-head"><span>${STATUS_META[s].label}<span class="count">${by(s).length}</span></span><a class="icon-btn icon-btn-sm" href="/app" aria-label="Add from your feed" title="Add from your feed">${ICON.plus}</a></div>
-        ${by(s).map(card).join('') || `<p class="column-empty">${s === 'offer' ? 'Your wins will land here 🎉' : 'Drop a card here'}</p>`}
+        <div class="column-body">${by(s).map(card).join('') || `<p class="column-empty">${s === 'offer' ? 'Your wins will land here 🎉' : 'Drop a card here'}</p>`}</div>
       </div>`).join('')}
-    </section>
-    ${closed.length ? `<details class="closed-wrap"><summary>Closed (${closed.length})</summary><div class="closed-list">${closed.map(card).join('')}</div></details>` : ''}`}`;
+      <div class="column column-closed" data-col="closed">
+        <div class="column-head"><span>Closed<span class="count">${closed.length}</span></span></div>
+        <div class="column-body">${closed.map(card).join('') || '<p class="column-empty">Rejected or withdrawn applications rest here</p>'}</div>
+      </div>
+    </section>`}`;
   renderStats();
   wire();
 }
@@ -113,7 +116,9 @@ function wire() {
       openStatusMenu(btn, app.status, (status) => (status === null ? remove(app.id) : move(app.id, status)));
     });
   });
-  root.querySelectorAll('.column').forEach((col) => {
+  // "Closed" isn't a drop target: rejected vs. withdrawn is a choice, made
+  // from the card's menu.
+  root.querySelectorAll('.column:not(.column-closed)').forEach((col) => {
     col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('is-over'); });
     col.addEventListener('dragleave', () => col.classList.remove('is-over'));
     col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('is-over'); move(e.dataTransfer.getData('text/plain'), col.dataset.col); });

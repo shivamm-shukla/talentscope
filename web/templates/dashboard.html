@@ -10,14 +10,14 @@
   <span class="status-pill"><i></i>On the lookout</span>
 </section>
 
-<section class="tiles" id="tiles" aria-label="At a glance">
+<section class="tiles strip" id="tiles" aria-label="At a glance">
   <div class="skeleton" style="min-height:130px"></div><div class="skeleton" style="min-height:130px"></div>
   <div class="skeleton" style="min-height:130px"></div><div class="skeleton" style="min-height:130px"></div>
 </section>
 
-<section class="notes" id="notes" aria-label="Santa's notes"></section>
+<section class="notes strip" id="notes" aria-label="Santa's notes"></section>
 
-<section aria-label="Your feed">
+<section aria-label="Your feed" class="feed-head">
   <div class="feed-toolbar">
     <div class="tabs" role="tablist" id="tabs"></div>
     <div class="filters">
@@ -29,11 +29,13 @@
       <select class="select select-sm" id="f-sort" aria-label="Sort"><option value="fit">Best fit</option><option value="new">Newest</option><option value="deadline">Closing soon</option></select>
     </div>
   </div>
+</section>
+<div class="page-scroll" id="feed-scroll">
   <div class="feed-list" id="feed">
     <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
   </div>
   <div class="load-more"><button type="button" class="btn btn-secondary" id="more" hidden>Show more</button></div>
-</section>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -81,7 +83,7 @@ function renderTabs() {
   $('tabs').innerHTML = tabs.map(([key, label, count]) => (
     `<button type="button" role="tab" data-tab="${key}" aria-selected="${key === state.tab}" class="${key === state.tab ? 'is-on' : ''}">${label}${count != null ? `<span class="count">${count}</span>` : ''}</button>`
   )).join('');
-  $('tabs').querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; state.shown = PAGE; renderTabs(); renderFeed(); }));
+  $('tabs').querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; state.shown = PAGE; renderTabs(); renderFeed(); $('feed-scroll').scrollTo({ top: 0, behavior: 'smooth' }); }));
 }
 
 function applyFilters(items) {
@@ -137,7 +139,7 @@ function renderFeed() {
 
 function tile(icon, value, label, sub, href, subClass = '') {
   const tag = href ? 'a' : 'article';
-  return `<${tag} class="card card-hover tile reveal" ${href ? `href="${href}"` : ''}><span class="tile-icon">${icon}</span><span class="tile-value">${value}</span><span class="tile-label">${label}</span><span class="tile-sub ${subClass}">${sub}</span></${tag}>`;
+  return `<${tag} class="card card-hover tile reveal" ${href ? `href="${href}"` : ''}><span class="tile-icon">${icon}</span><span class="tile-body"><span class="tile-value">${value}</span><span class="tile-label">${label}</span><span class="tile-sub ${subClass}">${sub}</span></span></${tag}>`;
 }
 
 function renderTiles() {
@@ -199,7 +201,7 @@ function renderNotes() {
   if (!SANTA.auth && state.all.length) {
     notes.push(note('guest-account', 'accent', ICON.lock, 'Want me to remember your shortlist?', 'A free account saves jobs, tracks applications and sends alerts. Takes 20 seconds.', ['Create account', '#', true]));
   }
-  $('notes').innerHTML = notes.slice(0, 3).join('');
+  $('notes').innerHTML = notes.slice(0, 2).join('');
   $('notes').querySelectorAll('.note').forEach((el, i) => {
     el.style.animationDelay = `${i * 90}ms`;
     el.querySelector('.note-dismiss').addEventListener('click', () => {
@@ -236,6 +238,12 @@ async function load() {
 
 ['q', 'f-type', 'f-mode', 'f-pay', 'f-sort'].forEach((id) => $(id).addEventListener(id === 'q' ? 'input' : 'change', () => { state.shown = PAGE; renderFeed(); }));
 $('more').addEventListener('click', () => { state.shown += PAGE; renderFeed(); });
+// Load the next page automatically as the list's end scrolls into view.
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting) && !$('more').hidden) { state.shown += PAGE; renderFeed(); }
+  }, { root: $('feed-scroll'), rootMargin: '0px 0px 300px 0px' }).observe($('more'));
+}
 window.addEventListener('santa:auth', load);
 window.addEventListener('santa:tracked', async () => {
   if (!SANTA.auth) return;

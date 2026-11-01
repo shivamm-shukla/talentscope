@@ -516,11 +516,12 @@ function openStatusMenu(anchor, current, onPick) {
   panel.style.bottom = 'auto';
   panel.style.right = 'auto';
   const onScroll = () => close();
-  window.addEventListener('scroll', onScroll, { passive: true, once: true });
+  // Capture phase: pages scroll inside panels, not the window.
+  window.addEventListener('scroll', onScroll, { passive: true, once: true, capture: true });
   const close = (event) => {
     if (event && event.target && panel.contains(event.target)) return;
     panel.remove();
-    window.removeEventListener('scroll', onScroll);
+    window.removeEventListener('scroll', onScroll, { capture: true });
     document.removeEventListener('click', close, true);
   };
   setTimeout(() => document.addEventListener('click', close, true));

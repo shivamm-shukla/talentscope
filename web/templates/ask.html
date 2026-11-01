@@ -1,12 +1,15 @@
 {% extends "shell.html" %}
 {% block title %}Ask Santa — Santa{% endblock %}
 {% block content %}
+<div class="page-head chat-head">
+  <div><h1>Ask Santa ✨</h1><p>Your AI career companion.</p></div>
+  <button type="button" class="btn btn-ghost btn-sm" id="clear-chat" hidden>New chat</button>
+</div>
 <section class="chat">
-  <div class="chat-log" id="log" aria-live="polite">
+  <div class="chat-log page-scroll" id="log" aria-live="polite">
     <div class="chat-intro" id="intro">
-      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="130" height="114">
-      <h1>Ask Santa ✨</h1>
-      <p class="soft">Your AI career companion. Answers come from the live postings Santa is watching.</p>
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="120" height="105">
+      <p class="soft">Answers come from the live postings Santa is watching. Try one of these:</p>
       <div class="suggestions" id="suggestions"></div>
     </div>
   </div>
@@ -58,7 +61,8 @@ function bubble(role, text, sources) {
   }
   log.appendChild(row);
   intro.hidden = true;
-  row.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' });
+  document.getElementById('clear-chat').hidden = false;
   return row;
 }
 
@@ -96,9 +100,16 @@ input.addEventListener('input', autosize);
 input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); } });
 
 history.forEach((m) => bubble(m.role, m.text, m.sources));
+document.getElementById('clear-chat').addEventListener('click', () => {
+  history = [];
+  persist();
+  log.querySelectorAll('.bubble, .bubble-row').forEach((el) => el.remove());
+  intro.hidden = false;
+  document.getElementById('clear-chat').hidden = true;
+});
 document.getElementById('ideas').addEventListener('click', () => {
   intro.hidden = false;
-  intro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  log.scrollTo({ top: 0, behavior: 'smooth' });
 });
 </script>
 {% endblock %}

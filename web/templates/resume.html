@@ -5,6 +5,7 @@
   <div><h1>Santa Resume</h1><p>Drafted from your GitHub, LinkedIn and skills. Edit anything, keep every version.</p></div>
   <button type="button" class="btn btn-primary" id="generate" data-auth-only hidden>✨ Generate new version</button>
 </div>
+<div class="page-scroll">
 
 <div id="guest" class="card locked" data-guest-only>
   <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="140" height="122">
@@ -46,6 +47,7 @@
     <h3>All versions</h3>
     <div class="versions" id="history" style="margin-top:10px"></div>
   </section>
+</div>
 </div>
 {% endblock %}
 {% block scripts %}

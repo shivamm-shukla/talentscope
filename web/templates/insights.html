@@ -7,11 +7,13 @@
     <option value="30">Last 30 days</option><option value="90" selected>Last 3 months</option><option value="180">Last 6 months</option>
   </select>
 </div>
+<div class="page-scroll">
 <section class="insight-summary" id="summary"></section>
 <section class="charts" id="charts">
   <div class="skeleton" style="min-height:320px"></div><div class="skeleton" style="min-height:320px"></div><div class="skeleton" style="min-height:320px"></div>
 </section>
 <div class="chart-tip" id="tip" hidden></div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -118,7 +120,7 @@ async function load() {
   }, 120));
 }
 document.getElementById('days').addEventListener('change', load);
-window.addEventListener('scroll', hideTip, { passive: true });
+window.addEventListener('scroll', hideTip, { passive: true, capture: true });
 load();
 </script>
 {% endblock %}

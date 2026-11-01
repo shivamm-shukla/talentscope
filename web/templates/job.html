@@ -4,9 +4,11 @@
 {% block body_class %}has-sticky-apply{% endblock %}
 {% block content %}
 <a class="icon-btn back-btn" href="{{ url_for('pages.dashboard') }}" id="back" aria-label="Back to your feed" title="Back to your feed">{{ icon('back') }}</a>
+<div class="page-scroll" id="job-scroll">
 <div id="job-root">
   <div class="skeleton" style="min-height:180px;margin-bottom:16px"></div>
   <div class="skeleton" style="min-height:320px"></div>
+</div>
 </div>
 {% endblock %}
 {% block scripts %}
