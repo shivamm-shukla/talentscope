@@ -123,18 +123,6 @@ class Answer:
 
 
 @dataclass(frozen=True, slots=True)
-class ResumeSection:
-    heading: str
-    bullets: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True, slots=True)
-class GeneratedResume:
-    content: str
-    sections: tuple[ResumeSection, ...] = ()
-
-
-@dataclass(frozen=True, slots=True)
 class OutcomeStats:
     applications_tracked: int
     applied_count: int

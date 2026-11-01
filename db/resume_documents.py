@@ -50,15 +50,6 @@ def finalize(session: Session, resume: ResumeDocument) -> ResumeDocument:
     return resume
 
 
-def latest_for_user(session: Session, user: User) -> ResumeDocument | None:
-    return session.scalar(
-        select(ResumeDocument)
-        .where(ResumeDocument.user_id == user.id)
-        .order_by(ResumeDocument.version.desc())
-        .limit(1)
-    )
-
-
 def list_versions(session: Session, user: User) -> list[ResumeDocument]:
     return list(
         session.scalars(
