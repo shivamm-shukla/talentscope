@@ -11,6 +11,9 @@ from __future__ import annotations
 from ai.providers.gemini import GenerateFn
 
 MAX_DESCRIPTION_CHARS = 1200
+# A big employer can have dozens of postings; a handful is plenty for a
+# brief and keeps the prompt (and latency) small.
+MAX_DESCRIPTIONS = 8
 
 
 def _build_prompt(company: str, descriptions: list[str]) -> str:
@@ -27,7 +30,7 @@ def _build_prompt(company: str, descriptions: list[str]) -> str:
         "Posting text:",
     ]
     if descriptions:
-        for text in descriptions:
+        for text in descriptions[:MAX_DESCRIPTIONS]:
             lines.append(f"- {text[:MAX_DESCRIPTION_CHARS]}")
     else:
         lines.append("(no posting text available)")
