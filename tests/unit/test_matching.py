@@ -79,3 +79,38 @@ def test_matcher_includes_partial_skill_matches_ranked_by_confidence() -> None:
         "Python + SQL + Java role",
     ]
     assert matches[0].score > matches[1].score
+
+
+def test_matcher_treats_city_aliases_and_multi_city_postings_as_the_same_place() -> (
+    None
+):
+    preferences = UserPreferences(locations=("Bangalore",))
+
+    assert len(match_jobs(preferences, [job(location="Bengaluru")])) == 1
+    assert len(match_jobs(preferences, [job(location="Pune, Bengaluru")])) == 1
+    assert match_jobs(preferences, [job(location="Pune")]) == []
+
+
+def test_matcher_remote_preference_matches_remote_work_mode() -> None:
+    preferences = UserPreferences(locations=("remote",))
+
+    assert len(match_jobs(preferences, [job(work_mode="remote")])) == 1
+    assert match_jobs(preferences, [job(work_mode="onsite")]) == []
+
+
+def test_matcher_filters_by_work_mode_and_listing_type() -> None:
+    preferences = UserPreferences(work_modes=("remote",), listing_types=("internship",))
+    remote_internship = job(title="A", work_mode="remote", listing_type="internship")
+    onsite_internship = job(title="B", work_mode="onsite", listing_type="internship")
+    remote_job = job(title="C", work_mode="remote", listing_type="job")
+    unclassified = job(title="D")
+
+    titles = [
+        match.job.title
+        for match in match_jobs(
+            preferences,
+            [remote_internship, onsite_internship, remote_job, unclassified],
+        )
+    ]
+
+    assert titles == ["A", "D"]

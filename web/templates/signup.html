@@ -1,45 +1,49 @@
-{% extends "base.html" %}
+{% extends "public.html" %}
 {% block title %}Sign up — Santa{% endblock %}
+{% block main_class %}auth-wrap{% endblock %}
 {% block content %}
 <section class="card auth-card">
-  <h1>Create your account</h1>
-  <p class="muted">Takes a minute. Set your preferences next and santa scout starts finding matches.</p>
-  <form id="signup-form" class="form" novalidate>
-    <label>Email
-      <input type="email" name="email" required autocomplete="email">
+  <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="92" height="80">
+  <h1>Let's get you sorted</h1>
+  <p class="lead">A free account lets Santa save jobs, track applications and send you alerts.</p>
+  <form id="auth-form" class="form" novalidate>
+    <label class="field">Your name <span class="field-hint">optional — so Santa knows what to call you</span>
+      <input class="input" name="name" autocomplete="given-name" placeholder="Aarav">
     </label>
-    <label>Password
-      <input type="password" name="password" minlength="8" required autocomplete="new-password">
+    <label class="field">Email
+      <input class="input" type="email" name="email" required autocomplete="email" placeholder="you@college.edu">
     </label>
-    <p class="field-hint">At least 8 characters.</p>
+    <label class="field">Password <span class="field-hint">at least 8 characters</span>
+      <input class="input" type="password" name="password" minlength="8" required autocomplete="new-password">
+    </label>
     <p class="form-error" id="form-error" hidden></p>
     <button type="submit" class="btn btn-primary btn-block">Create account</button>
   </form>
-  <p class="muted">Already have an account? <a href="{{ url_for('pages.login_page') }}">Log in</a></p>
+  <div class="auth-foot">
+    <span>Already have an account? <a href="{{ url_for('pages.login_page') }}">Log in</a></span>
+    <div class="divider">or</div>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('pages.dashboard') }}">Skip — just browse jobs →</a>
+  </div>
 </section>
 {% endblock %}
 {% block scripts %}
 <script>
-document.getElementById('signup-form').addEventListener('submit', async (event) => {
+document.getElementById('auth-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.target;
   const errorEl = document.getElementById('form-error');
+  const button = form.querySelector('[type=submit]');
   errorEl.hidden = true;
-  const body = {
-    email: form.email.value,
-    password: form.password.value,
-  };
-  const response = await fetch('/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (response.ok) {
-    window.location.href = "{{ url_for('pages.preferences_page') }}";
+  button.disabled = true;
+  const ok = await authenticate('signup', form.email.value, form.password.value, form.name.value);
+  button.disabled = false;
+  if (ok === true) {
+    // Someone who already went through onboarding as a guest just had those
+    // choices pushed to their account — no need to ask again.
+    window.location.href = hasPrefs(localPrefs()) ? "{{ url_for('pages.dashboard') }}" : "{{ url_for('pages.welcome') }}";
     return;
   }
-  const data = await response.json().catch(() => ({}));
-  errorEl.textContent = data.error || 'Something went wrong. Please try again.';
+  errorEl.textContent = ok;
   errorEl.hidden = false;
 });
 </script>

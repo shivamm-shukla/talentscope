@@ -1,5 +1,6 @@
 """Deterministic matching between normalized jobs and user preferences."""
 
+from analysis.locations import location_matches
 from core.models import JobPosting, MatchedJob, UserPreferences
 
 
@@ -12,10 +13,21 @@ def match_jobs(
 ) -> list[MatchedJob]:
     """Return jobs ranked by skills, location, and stipend evidence."""
     desired_skills = _normalized(preferences.skills)
-    desired_locations = _normalized(preferences.locations)
+    desired_work_modes = _normalized(preferences.work_modes)
+    desired_listing_types = _normalized(preferences.listing_types)
     matches: list[MatchedJob] = []
 
     for job in jobs:
+        # Hard filters: a posting of the wrong kind isn't a weaker match, it's
+        # not a match. Unclassified postings (None) are given the benefit of
+        # the doubt rather than silently hidden.
+        if desired_work_modes and job.work_mode not in (None, *desired_work_modes):
+            continue
+        if desired_listing_types and job.listing_type not in (
+            None,
+            *desired_listing_types,
+        ):
+            continue
         reasons: list[str] = []
         score = 0.0
         job_skills = _normalized(job.skills)
@@ -31,12 +43,12 @@ def match_jobs(
             score += 0.6 * recall * precision
             reasons.append("skills: " + ", ".join(sorted(common_skills)))
 
-        location_matches = (
-            not desired_locations or job.location.casefold() in desired_locations
+        location_ok = location_matches(
+            preferences.locations, job.location, job.work_mode
         )
-        if location_matches:
+        if location_ok:
             score += 0.25
-            if desired_locations:
+            if any(place.strip() for place in preferences.locations):
                 reasons.append(f"location: {job.location}")
 
         stipend_matches = (
@@ -52,7 +64,7 @@ def match_jobs(
             ):
                 reasons.append("stipend meets minimum")
 
-        if score > 0 and skills_match and location_matches and stipend_matches:
+        if score > 0 and skills_match and location_ok and stipend_matches:
             matches.append(
                 MatchedJob(job=job, score=round(score, 3), reasons=tuple(reasons))
             )

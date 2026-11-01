@@ -1,0 +1,139 @@
+{% extends "shell.html" %}
+{% block title %}My Applications — Santa{% endblock %}
+{% block main_mod %}two-level{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>My Applications</h1><p>Everything you're chasing, in one calm place. Drag a card — or use its menu — to move it.</p></div>
+  <a class="icon-btn" href="{{ url_for('pages.dashboard') }}" aria-label="Find more jobs" title="Find more jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>
+</div>
+<div id="root" class="fill"><div class="skeleton" style="min-height:90px;margin-bottom:14px"></div><div class="skeleton" style="flex:1"></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const COLUMNS = ['saved', 'applied', 'interviewing', 'offer'];
+const root = document.getElementById('root');
+let apps = [];
+
+function card(app) {
+  const days = Math.floor((Date.now() - new Date(app.updated_at)) / 86400000);
+  const stale = app.status === 'applied' && days >= 7;
+  return `<article class="app-card" draggable="true" data-id="${app.id}" data-job="${app.job_id}">
+    <div class="app-card-top">
+      ${logoTile(app.job.company, 'logo-tile-sm')}
+      <div class="grow"><h4>${escapeHTML(app.job.title)}</h4><span class="co">${escapeHTML(app.job.company)}</span></div>
+      <span class="menu"><button type="button" class="icon-btn icon-btn-sm" data-move aria-label="Move ${escapeHTML(app.job.title)}" title="Move or remove">${ICON.more}</button></span>
+    </div>
+    ${app.notes ? `<p class="note-line">${escapeHTML(app.notes)}</p>` : ''}
+    <div class="app-card-foot">
+      <span>${stale ? `<span class="tag tag-warn">${ICON.clock} ${days}d, no reply</span>` : `Updated ${timeAgo(app.updated_at)}`}</span>
+      <a href="/app/jobs/${app.job_id}" class="small">Open →</a>
+    </div>
+  </article>`;
+}
+
+function render() {
+  if (!SANTA.auth) {
+    root.innerHTML = `<div class="page-scroll"><div class="card locked"><img class="mascot mascot-float" src="/static/assets/santa-mascot.svg" alt="" width="140"><h2>Your application board lives here</h2><p>Save jobs and mark what you've applied to — Santa tracks replies, reminds you before deadlines, and tells you when it's time to follow up.</p><button type="button" class="btn btn-primary" id="signin">Create free account</button><a class="btn btn-ghost" href="/app">Browse jobs first</a></div></div>`;
+    root.querySelector('#signin').addEventListener('click', () => requireAccount('Create a free account to start your application board.'));
+    return;
+  }
+  const by = (s) => apps.filter((a) => a.status === s);
+  const closed = apps.filter((a) => ['rejected', 'withdrawn'].includes(a.status));
+  root.innerHTML = `
+    <section class="stats-row strip" id="stats"></section>
+    ${!apps.length ? `<div class="page-scroll"><div class="card empty"><img class="mascot" src="/static/assets/santa-mascot.svg" alt=""><h2>No applications yet</h2><p>Save a job or hit Apply on one — it lands here automatically.</p><a class="btn btn-primary" href="/app">Explore your feed</a></div></div>` : `
+    <section class="board" aria-label="Application board">
+      ${COLUMNS.map((s) => `<div class="column" data-col="${s}">
+        <div class="column-head"><span>${STATUS_META[s].label}<span class="count">${by(s).length}</span></span><a class="icon-btn icon-btn-sm" href="/app" aria-label="Add from your feed" title="Add from your feed">${ICON.plus}</a></div>
+        <div class="column-body">${by(s).map(card).join('') || `<p class="column-empty">${s === 'offer' ? 'Your wins will land here 🎉' : 'Drop a card here'}</p>`}</div>
+      </div>`).join('')}
+      <div class="column column-closed" data-col="closed">
+        <div class="column-head"><span>Closed<span class="count">${closed.length}</span></span></div>
+        <div class="column-body">${closed.map(card).join('') || '<p class="column-empty">Rejected or withdrawn applications rest here</p>'}</div>
+      </div>
+    </section>`}`;
+  renderStats();
+  wire();
+}
+
+async function renderStats() {
+  const result = await fetchJSON('/applications/stats');
+  const el = document.getElementById('stats');
+  if (!el || !result.ok) return;
+  const s = result.data;
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const I = {
+    rate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+    offer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>',
+    total: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>',
+    time: ICON.clock,
+  };
+  el.innerHTML = [
+    [I.rate, 'Response Rate', s.applied_count ? pct(s.response_rate) : '—', s.applied_count ? `${s.response_count} of ${s.applied_count} replied` : 'Appears once you apply', s.applied_count > 0],
+    [I.offer, 'Offer Rate', s.applied_count ? pct(s.offer_rate) : '—', `${s.offer_count} offer${s.offer_count === 1 ? '' : 's'}`, s.offer_count > 0],
+    [I.total, 'Total Applications', s.applications_tracked, apps.filter((a) => a.status === 'interviewing').length + ' interviewing', false],
+    [I.time, 'Avg. reply time', s.avg_response_hours != null ? `${Math.round(s.avg_response_hours / 24)}d` : '—', 'From apply to first reply', false],
+  ].map(([icon, label, value, sub, up]) => `<article class="card stat reveal"><span class="stat-icon">${icon}</span><div><span class="tile-value">${value}</span><span class="tile-label" style="display:block">${label}</span><span class="tile-sub ${up ? 'up' : ''}">${sub}</span></div></article>`).join('');
+  reveal(el);
+}
+
+async function move(appId, status) {
+  const app = apps.find((a) => String(a.id) === String(appId));
+  if (!app || app.status === status) return;
+  const previous = app.status;
+  app.status = status;
+  render();
+  const result = await fetchJSON(`/applications/${appId}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  if (!result.ok) { app.status = previous; render(); toast('Couldn’t move that — try again.'); return; }
+  Object.assign(app, result.data);
+  const cheer = { interviewing: 'Interview stage — nice! Want to prep with Santa?', offer: 'An offer! 🎉 Congratulations — you earned this.', rejected: 'Their loss. On to the next one — Santa’s still looking.' };
+  toast(cheer[status] || `Moved to ${STATUS_META[status].label}.`, { label: 'Undo', run: () => move(appId, previous) });
+}
+
+async function remove(appId) {
+  const app = apps.find((a) => String(a.id) === String(appId));
+  if (!app) return;
+  apps = apps.filter((a) => a !== app);
+  render();
+  const result = await fetchJSON(`/applications/${appId}`, { method: 'DELETE' });
+  if (!result.ok) { apps.push(app); render(); toast('Couldn’t remove that — try again.'); return; }
+  toast(`Removed ${app.job.title} from your board.`, {
+    label: 'Undo',
+    run: async () => {
+      const back = await trackJob(app.job_id, app.status);
+      if (back) { if (app.notes) await fetchJSON(`/applications/${back.id}`, { method: 'PATCH', body: JSON.stringify({ notes: app.notes }) }); load(); }
+    },
+  });
+}
+
+function wire() {
+  root.querySelectorAll('.app-card').forEach((el) => {
+    el.addEventListener('dragstart', (e) => { el.classList.add('is-dragging'); e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed = 'move'; });
+    el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
+    const btn = el.querySelector('[data-move]');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const app = apps.find((a) => String(a.id) === el.dataset.id);
+      openStatusMenu(btn, app.status, (status) => (status === null ? remove(app.id) : move(app.id, status)));
+    });
+  });
+  // "Closed" isn't a drop target: rejected vs. withdrawn is a choice, made
+  // from the card's menu.
+  root.querySelectorAll('.column:not(.column-closed)').forEach((col) => {
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('is-over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('is-over'));
+    col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('is-over'); move(e.dataTransfer.getData('text/plain'), col.dataset.col); });
+  });
+}
+
+async function load() {
+  if (SANTA.auth) {
+    const result = await fetchJSON('/applications');
+    apps = (result.ok && result.data) || [];
+  }
+  render();
+}
+window.addEventListener('santa:auth', load);
+load();
+</script>
+{% endblock %}

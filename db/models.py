@@ -115,6 +115,8 @@ class UserPreference(Base):
     preferred_channels: Mapped[list[str]] = mapped_column(
         JSON, default=list, nullable=False
     )
+    work_modes: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    listing_types: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     user: Mapped[User] = relationship(back_populates="preferences")
 
 

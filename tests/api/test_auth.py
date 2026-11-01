@@ -35,6 +35,7 @@ def test_signup_logs_in_user_and_prevents_duplicates(client) -> None:
     assert client.get("/auth/me").get_json() == {
         "id": 1,
         "email": "student@example.test",
+        "name": "",
     }
     assert signup(client).status_code == 409
 
@@ -68,6 +69,9 @@ def test_login_logout_and_preference_crud(client) -> None:
         "locations": ["Remote"],
         "minimum_stipend": 12000,
         "channels": ["email", "telegram"],
+        "work_modes": [],
+        "listing_types": [],
+        "name": "",
         "telegram_chat_id": "1333041980",
         "github_username": "octocat",
         "github_profile": None,
