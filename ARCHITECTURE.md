@@ -122,7 +122,7 @@ from a prompt, not a Q&A turn, so it doesn't fit that Protocol and isn't forced 
 - `ai/providers/gemini.py` implements `QAEngine`. Swapping to a different provider
   (Claude, GPT, a local model) means writing one new file under `ai/providers/` and
   changing one config value — `web/` and everything else calls `QAEngine.answer()` and
-  never imports `google.generativeai` directly.
+  never imports `google.genai` directly.
 
 ## Data model (db/)
 

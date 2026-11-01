@@ -11,10 +11,15 @@ from core.interfaces import QAEngine
 DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
 
 
+class AIUnavailable(ValueError):
+    """The AI provider isn't configured on this server (e.g. no API key) —
+    distinct from a provider call failing, so callers can say so plainly."""
+
+
 def _require_env(name: str) -> str:
     value = os.environ.get(name)
     if not value:
-        raise ValueError(f"Missing required environment variable: {name}")
+        raise AIUnavailable(f"Missing required environment variable: {name}")
     return value
 
 
