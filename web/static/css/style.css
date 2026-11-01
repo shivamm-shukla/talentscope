@@ -99,7 +99,8 @@
 
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --gutter: clamp(16px, 3vw, 32px);
+  --gutter: clamp(16px, 4vw, 64px);
+  --header-h: 68px;
 }
 
 :root[data-theme="dark"] {
@@ -426,7 +427,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
    Public pages (landing / auth)
    ========================================================================= */
 .site-header {
-  position: sticky; top: 0; z-index: 30;
+  position: sticky; top: 0; z-index: 30; height: var(--header-h);
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px var(--gutter);
   transition: background 0.3s, box-shadow 0.3s;
@@ -443,20 +444,20 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
   .site-nav .btn { padding: 0 14px; }
 }
 
-.public-main { padding: 0 var(--gutter) 40px; max-width: 1240px; margin: 0 auto; }
+.public-main { padding: 0 var(--gutter) 40px; }
 
+/* Edge-to-edge, full-viewport hero. It bleeds out of .public-main's gutter
+   and slides up under the (transparent) sticky header. */
 .hero {
   position: relative; overflow: hidden; isolation: isolate;
-  border-radius: var(--radius-xl);
-  min-height: clamp(560px, 80vh, 720px);
+  margin: calc(var(--header-h) * -1) calc(var(--gutter) * -1) 0;
+  min-height: 100svh;
   display: flex; align-items: center;
-  padding: clamp(28px, 5vw, 72px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-lg);
+  padding: calc(var(--header-h) + 24px) var(--gutter) 64px;
   --px: 0; --py: 0;
 }
-.hero-copy { position: relative; z-index: 5; max-width: 540px; min-width: 0; }
-.hero h1 { font-size: clamp(2.3rem, 1.4rem + 4.2vw, 4.4rem); line-height: 1.03; letter-spacing: -0.045em; font-weight: 800; }
+.hero-copy { position: relative; z-index: 5; max-width: clamp(540px, 38vw, 680px); min-width: 0; }
+.hero h1 { font-size: clamp(2.3rem, 1.4rem + 4.2vw, 5.2rem); line-height: 1.03; letter-spacing: -0.045em; font-weight: 800; }
 .hero p { margin-top: 20px; font-size: clamp(1rem, 0.95rem + 0.3vw, 1.14rem); color: var(--ink-2); max-width: 470px; }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 30px; }
 .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--glass-strong); border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm); font-weight: 650; font-size: 0.85rem; margin-bottom: 22px; }
@@ -491,7 +492,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .hills-near { height: 44%; z-index: 3; filter: drop-shadow(0 -6px 18px rgba(108, 71, 224, 0.12)); }
 /* Santa sits low so the near hills hide his lower half — peeking over, as in
    the reference art. */
-.mascot-stage { position: absolute; z-index: 2; right: 15%; bottom: 9%; width: clamp(240px, 27vw, 380px); aspect-ratio: 128 / 112; }
+.mascot-stage { position: absolute; z-index: 2; right: 14%; bottom: 11%; width: clamp(240px, 24vw, 440px); aspect-ratio: 128 / 112; }
 .mascot-stage .halo { position: absolute; inset: -55%; background: var(--halo); animation: breathe 6s ease-in-out infinite; }
 .hero-mascot { position: relative; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 18px 40px rgba(108, 71, 224, 0.28)); animation: rise-up 1.4s var(--spring) 0.2s both; }
 :root[data-theme="dark"] .hero-mascot { filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.45)) brightness(0.94); }
@@ -507,7 +508,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
   animation: pop-in 0.6s var(--spring) 1.6s both;
 }
 .speech b { color: var(--ink); }
-.hero-trail { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; }
+.hero-trail { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; }
 .hero-trail path { stroke-dasharray: 1600; stroke-dashoffset: 1600; animation: trail 3.4s var(--ease) 0.4s forwards; }
 .float { position: absolute; z-index: 5; }
 .float-card {
@@ -548,7 +549,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
   .fc-nudge { display: none; }
 }
 @media (max-width: 860px) {
-  .hero { flex-direction: column; justify-content: flex-start; align-items: stretch; min-height: 0; padding: 30px 22px 330px; }
+  .hero { flex-direction: column; justify-content: flex-start; align-items: stretch; min-height: 100svh; padding: calc(var(--header-h) + 22px) var(--gutter) 330px; }
   .hero-scene::after { background: linear-gradient(180deg, var(--copy-veil-mobile, rgba(255, 248, 252, 0.6)), transparent 55%); }
   :root[data-theme="dark"] .hero-scene::after { --copy-veil-mobile: rgba(18, 15, 42, 0.6); }
   .hills-far { height: 46%; }
@@ -562,7 +563,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 }
 @media (max-width: 420px) { .hero { padding-bottom: 310px; } .mascot-stage { width: 210px; } }
 
-.trio { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
+.trio { position: relative; z-index: 2; display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: -48px; }
 .trio-item { display: flex; gap: 14px; align-items: flex-start; padding: 18px; }
 .trio-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; flex: none; background: var(--glass-solid); box-shadow: var(--shadow-sm); color: var(--accent); }
 .trio-icon svg { width: 20px; height: 20px; }
@@ -619,29 +620,18 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--hairline-strong); }
 
 /* =========================================================================
-   App window — the product floats as one frosted pane, as in the
-   reference. Desktop: sidebar inside the pane. Tablet: icon rail.
-   Phone: full-bleed, top bar + floating tab bar.
+   App shell — full-bleed: the sidebar is flush to the left edge and the
+   content uses the whole remaining width (no floating window, no side
+   margins). Tablet: icon rail. Phone: top bar + floating tab bar.
    ========================================================================= */
-.app {
-  display: grid; grid-template-columns: 236px minmax(0, 1fr);
-  margin: 14px; min-height: calc(100vh - 28px);
-  border-radius: var(--radius-xl);
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-lg), var(--inner);
-  backdrop-filter: blur(30px) saturate(1.3); -webkit-backdrop-filter: blur(30px) saturate(1.3);
-  overflow: clip;
-  /* Sidebar divider drawn on the window so it spans the full page height
-     (the sticky sidebar itself is only one viewport tall). */
-  --rail: 236px;
-  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0, rgba(255, 255, 255, 0.3) calc(var(--rail) - 1px), var(--hairline) calc(var(--rail) - 1px), var(--hairline) var(--rail), transparent var(--rail));
-}
-:root[data-theme="dark"] .app { background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0, rgba(255, 255, 255, 0.025) calc(var(--rail) - 1px), var(--hairline) calc(var(--rail) - 1px), var(--hairline) var(--rail), transparent var(--rail)); }
+.app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
 .sidebar {
-  position: sticky; top: 14px; height: calc(100vh - 28px);
+  position: sticky; top: 0; height: 100vh;
   display: flex; flex-direction: column; gap: 4px;
   padding: 22px 14px 16px;
+  background: var(--glass);
+  border-right: 1px solid var(--hairline);
+  backdrop-filter: blur(28px) saturate(1.3); -webkit-backdrop-filter: blur(28px) saturate(1.3);
   overflow-y: auto; scrollbar-width: none;
 }
 .sidebar .brand { padding: 0 8px 22px; }
@@ -674,12 +664,12 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .theme-toggle svg { transition: transform 0.5s var(--spring); }
 .theme-toggle:hover svg { transform: rotate(30deg); }
 
-.main { position: relative; min-width: 0; padding: clamp(20px, 2.6vw, 34px) clamp(18px, 2.8vw, 36px) 56px; isolation: isolate; }
-.main-inner { max-width: 1180px; margin: 0 auto; min-width: 0; }
+.main { position: relative; min-width: 0; padding: clamp(20px, 2.6vw, 36px) clamp(18px, 3vw, 48px) 56px; isolation: isolate; }
+.main-inner { min-width: 0; }
 .topbar, .tabbar { display: none; }
 
 /* Hills banner behind the home greeting. */
-.banner { position: absolute; inset: 0 0 auto 0; height: 340px; z-index: -1; pointer-events: none; overflow: hidden; border-radius: 0 var(--radius-xl) 0 0; }
+.banner { position: absolute; inset: 0 0 auto 0; height: 340px; z-index: -1; pointer-events: none; overflow: hidden; }
 .banner::before {
   content: ""; position: absolute; inset: 0;
   background: url("../assets/hills.webp") center 70% / cover no-repeat;
@@ -698,7 +688,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .back-btn { margin-bottom: 16px; }
 
 @media (max-width: 1100px) {
-  .app { grid-template-columns: 80px minmax(0, 1fr); --rail: 80px; }
+  .app { grid-template-columns: 80px minmax(0, 1fr); }
   .sidebar { padding: 20px 10px 14px; align-items: center; }
   .sidebar .brand span, .nav-item span, .companion-card, .user-chip .who { display: none; }
   .sidebar .brand { padding: 0 0 18px; }
@@ -707,7 +697,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
   .user-chip { flex: none; }
 }
 @media (max-width: 720px) {
-  .app { display: block; margin: 0; border-radius: 0; border: 0; min-height: 100vh; box-shadow: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: visible; }
+  .app { display: block; min-height: 100vh; }
   .sidebar { display: none; }
   .topbar {
     position: sticky; top: 0; z-index: 30;
@@ -729,7 +719,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
   .tab svg { width: 22px; height: 22px; transition: transform 0.3s var(--spring); }
   .tab.is-active { color: var(--accent-ink); background: var(--nav-active); }
   .tab.is-active svg { transform: translateY(-1px) scale(1.08); }
-  .banner { height: 250px; border-radius: 0; }
+  .banner { height: 250px; }
 }
 
 /* =========================================================================
@@ -808,6 +798,7 @@ a.tile:hover { color: inherit; }
    content's min-content width and push cards past a phone's edge. */
 .feed-list, .notes, .bars, .form, .tile, .app-card { grid-template-columns: minmax(0, 1fr); }
 .feed-list { display: grid; gap: 14px; }
+@media (min-width: 1600px) { .feed-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .job-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; cursor: pointer; padding: 20px 22px; }
 .job-head { display: flex; gap: 16px; align-items: flex-start; }
 .job-title { flex: 1; min-width: 0; }
