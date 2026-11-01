@@ -42,7 +42,7 @@ and job discovery. Planned siblings, not yet built:
 | Product | What it does | Status |
 |---|---|---|
 | **santa scout** | Internship/job discovery, application tracking, deadline reminders, alerts | 🟢 Live |
-| **santa resume** | AI resume builder from your synced GitHub/LinkedIn/skills | 🟡 In progress |
+| **santa resume** | AI resume builder from your synced GitHub/LinkedIn/skills | 🟢 v1 live (standalone, works without synced data) |
 | **santa prep** | AI mock-interview trainer, over live video call | ⚪ Planned |
 | **santa desk** | Calendar, email & meeting management agent | ⚪ Planned |
 | **santa vaani** | Voice & call companion (reminders, check-ins) | ⚪ Planned |
@@ -83,7 +83,7 @@ The product value is for students; the engineering rigor is for me.
 - **Ghost-job / repost detection** — postings that disappear from a scrape and reappear later (kept artificially alive by relisting) get flagged inline, deterministically, no LLM call needed
 - **Deadline reminders** — for Internshala postings, a real application deadline is scraped from the posting's own detail page (not a guess); if you've saved/applied to one, you get a one-time nudge as it approaches. Remotive has no such field, so those postings never claim a deadline
 - **AI company research briefs** — a short, cached-per-company summary generated from that company's own posting text, available per job
-- **AI resume builder** (`/app/resume`, in progress) — drafts a resume from your synced GitHub, LinkedIn, and skills; edit sections, keep every generated version, copy/download the text
+- **AI resume builder** (`/app/resume`) — drafts a resume from your synced GitHub, LinkedIn, and skills; edit sections, keep every generated version, copy/download the text
 - **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences, ranked by how closely a job's skill demands fit what the user actually knows
 - **GitHub skill sync** — link a GitHub username and santa periodically scans public repos to keep the skills list current; **LinkedIn import** — upload a LinkedIn data export (self-service, no scraping) to pull in positions, education, and skills the same way. Both feed the same skill vocabulary and also seed the resume builder
 - **Natural-language Q&A** (a corner entry point next to the theme toggle) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
@@ -189,14 +189,14 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [x] APScheduler pipeline wiring (separate process; scrape → analyze → match → notify)
 - [x] Gemini Q&A endpoint
 - [x] pytest suite: unit, integration, API (E2E still pending)
-- [x] ≥70% coverage (99% on covered modules as of the AI Q&A endpoint)
+- [x] ≥70% coverage (~99% on the measured `core`/`db` modules; 154 tests)
 - [x] Structured JSON logging
 - [x] Render deployment (code/config ready — see "Deploying" below for the manual account-setup steps)
 - [x] Web UI (landing, signup/login, preferences, dashboard) with light/dark theme
 - [x] CS/BCA relevance filter + listing taxonomy (work mode, pay type, duration, target year) at ingestion
 - [x] Expiry-based retention (don't store/list postings past their application window)
 - [x] GitHub skill sync + LinkedIn data-export import
-- [x] AI resume builder (in progress — generation/editing/versioning work, UI still being refined)
+- [x] AI resume builder (`/app/resume`): generation, section editing, versioning; every input optional
 - [x] Application tracker (saved/applied/interviewing/offer/rejected/withdrawn, status history)
 - [x] Response-rate / offer-rate stats over tracked applications
 - [x] Ghost-job / repost detection (deterministic, from a per-scrape-cycle observation log)
@@ -266,14 +266,14 @@ background workers/cron jobs).
      users with `email` in their preferred channels
    - `TELEGRAM_BOT_TOKEN` — for users with `telegram` in their preferred channels
 
-The web service only serves auth/preferences/matches/Q&A — it never runs the scrape
+The web service only serves auth, preferences, matches, the application tracker, resume builder, company briefs and Q&A — it never runs the scrape
 pipeline itself, so Render's free-tier idle sleep has no effect on data freshness.
 
 ---
 
 ## Project conventions
 
-- **Branching:** `feature/*` → `dev` → `main`, all merges via PR
+- **Branching:** only `dev` and `main` are long-lived; short-lived `feature/*`/`fix/*` branches → `dev` → `main`, all merges via PR, and a topic branch is deleted once merged
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`)
 - **CI gate:** All tests must pass + coverage ≥70% before merge to `main`
 - **Code style:** `black` formatter, `ruff` linter (enforced in CI)

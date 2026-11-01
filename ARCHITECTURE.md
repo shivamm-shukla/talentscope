@@ -20,6 +20,13 @@ made it. See [BACKLOG.md](./BACKLOG.md) for what I've deliberately deferred and
    real-world action on a user's behalf (Phase C). Each phase's design must not foreclose
    the next.
 
+## Product principle
+
+Every Santa product (scout, resume, and the planned siblings) must be usable
+standalone — none may depend on another product's data being present (e.g. the resume
+builder works for a user with no synced GitHub/LinkedIn data). Products still share the
+same account, skill vocabulary, and database, so they integrate without coupling.
+
 ## Module map
 
 ```
