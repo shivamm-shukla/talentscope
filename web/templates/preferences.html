@@ -24,6 +24,8 @@
         </label>
         <div class="field">Looking for <div class="chips" id="types"></div></div>
       </div>
+      <div class="step-section"><h3>How you like to work</h3><div class="chips" id="modes"></div>
+        <p class="field-hint" style="margin-top:6px">Pick none to see every kind.</p></div>
     </section>
   </div>
 
@@ -83,6 +85,7 @@
 const SKILLS = ['python', 'javascript', 'react', 'java', 'sql', 'node.js', 'machine learning', 'data analysis', 'typescript', 'c++', 'django', 'flask', 'figma', 'excel'];
 const CITIES = ['Remote', 'Bangalore', 'Hyderabad', 'Pune', 'Mumbai', 'Delhi', 'Gurgaon', 'Noida', 'Chennai'];
 const TYPES = { internship: 'Internships', job: 'Jobs' };
+const MODES = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'In office' };
 const $ = (id) => document.getElementById(id);
 let prefs = emptyPrefs();
 let dirty = false;
@@ -112,18 +115,22 @@ function renderChips() {
       suggest.appendChild(chip);
     });
   });
-  $('types').innerHTML = '';
-  Object.entries(TYPES).forEach(([value, label]) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip' + (prefs.listing_types.includes(value) ? ' is-on' : '');
-    chip.textContent = label;
-    chip.addEventListener('click', () => {
-      prefs.listing_types = prefs.listing_types.includes(value) ? prefs.listing_types.filter((v) => v !== value) : [...prefs.listing_types, value];
-      markDirty();
-      renderChips();
+  [['types', TYPES, 'listing_types'], ['modes', MODES, 'work_modes']].forEach(([id, options, key]) => {
+    $(id).innerHTML = '';
+    Object.entries(options).forEach(([value, label]) => {
+      const on = (prefs[key] || []).includes(value);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip' + (on ? ' is-on' : '');
+      chip.setAttribute('aria-pressed', String(on));
+      chip.textContent = label;
+      chip.addEventListener('click', () => {
+        prefs[key] = on ? prefs[key].filter((v) => v !== value) : [...(prefs[key] || []), value];
+        markDirty();
+        renderChips();
+      });
+      $(id).appendChild(chip);
     });
-    $('types').appendChild(chip);
   });
 }
 
@@ -153,6 +160,7 @@ async function save() {
       method: 'PUT',
       body: JSON.stringify({
         name: prefs.name, skills: prefs.skills, locations: prefs.locations, minimum_stipend: prefs.minimum_stipend,
+        work_modes: prefs.work_modes, listing_types: prefs.listing_types,
         channels: prefs.channels, telegram_chat_id: prefs.telegram_chat_id || null, github_username: prefs.github_username || null,
       }),
     });

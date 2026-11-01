@@ -134,7 +134,11 @@ Core tables, replacing the CSV-based storage from the original prototype:
   estimate), `deadline_at` (real, source-confirmed deadline — Internshala only,
   always `NULL` for Remotive), `quality_score`/`quality_flags`). Unique constraint on
   a normalized key (title+company+location+source) for dedup.
-- `users`, `user_preferences` (skills, locations, min stipend, preferred channels)
+- `users`, `user_preferences` (skills, locations, min stipend, preferred channels, and
+  work_modes / listing_types — hard filters in the matcher). Locations are compared
+  through `analysis/locations.py` (city aliases like Bengaluru = Bangalore, multi-city
+  postings, "remote" matching remote-classified work), mirrored client-side in
+  `web/static/js/app.js` for guests — keep the two alias tables in sync.
 - `matches` — which jobs were matched to which user, and when (so re-runs don't
   re-notify for the same job).
 - `notifications_sent` — delivery log per channel, with status (sent/failed), for

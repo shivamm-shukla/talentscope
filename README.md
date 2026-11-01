@@ -93,12 +93,12 @@ The product value is for students; the engineering rigor is for me.
 - **Daily-curated internship/job feed** scraped from Internshala (Playwright) and Remotive API, filtered to CS/BCA-relevant postings only
 - **Classification** of every posting into listing type (internship/job), work mode (remote/onsite/hybrid), pay type, duration, and target year — so the feed reads like a briefing, not a search-results page
 - **Retention policy** — postings past their estimated application window are never stored or shown
-- **Application tracker** — mark a posting saved/applied/interviewing/offer/rejected/withdrawn right from the feed, with a full status-history and response-rate/offer-rate stats computed from it
+- **Application tracker** — mark a posting saved/applied/interviewing/offer/rejected/withdrawn right from the feed, with a full status-history and response-rate/offer-rate stats computed from it; un-save or remove anything (with undo)
 - **Ghost-job / repost detection** — postings that disappear from a scrape and reappear later (kept artificially alive by relisting) get flagged inline, deterministically, no LLM call needed
 - **Deadline reminders** — for Internshala postings, a real application deadline is scraped from the posting's own detail page (not a guess); if you've saved/applied to one, you get a one-time nudge as it approaches. Remotive has no such field, so those postings never claim a deadline
 - **AI company research briefs** — a short, cached-per-company summary generated from that company's own posting text, available per job
 - **AI resume builder** (`/app/resume`) — drafts a resume from your synced GitHub, LinkedIn, and skills; edit sections, keep every generated version, copy/download the text
-- **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences, ranked by how closely a job's skill demands fit what the user actually knows
+- **Personalised alerts** via email and Telegram, matched against user-set skills, location (alias-aware: Bengaluru = Bangalore, WFH = Remote), stipend, work mode and internship/job preferences, ranked by how closely a job's skill demands fit what the user actually knows
 - **GitHub skill sync** — link a GitHub username and santa periodically scans public repos to keep the skills list current; **LinkedIn import** — upload a LinkedIn data export (self-service, no scraping) to pull in positions, education, and skills the same way. Both feed the same skill vocabulary and also seed the resume builder
 - **Ask Santa** (`/app/ask`, chat-style) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
 

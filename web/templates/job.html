@@ -96,7 +96,7 @@ function render() {
     root.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== button.dataset.tab; });
   }));
   const onChange = async () => { await load(); };
-  root.querySelectorAll('[data-act=save]').forEach((b) => b.addEventListener('click', () => saveJob(job, onChange)));
+  root.querySelectorAll('[data-act=save]').forEach((b) => b.addEventListener('click', () => saveJob(job, onChange, status)));
   root.querySelectorAll('[data-act=apply]').forEach((b) => b.addEventListener('click', () => applyToJob(job, onChange)));
   root.querySelector('[data-act=share]').addEventListener('click', () => shareJob(job));
   const briefBtn = document.getElementById('brief-btn');

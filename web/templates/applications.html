@@ -80,6 +80,22 @@ async function move(appId, status) {
   toast(cheer[status] || `Moved to ${STATUS_META[status].label}.`, { label: 'Undo', run: () => move(appId, previous) });
 }
 
+async function remove(appId) {
+  const app = apps.find((a) => String(a.id) === String(appId));
+  if (!app) return;
+  apps = apps.filter((a) => a !== app);
+  render();
+  const result = await fetchJSON(`/applications/${appId}`, { method: 'DELETE' });
+  if (!result.ok) { apps.push(app); render(); toast('Couldn’t remove that — try again.'); return; }
+  toast(`Removed ${app.job.title} from your board.`, {
+    label: 'Undo',
+    run: async () => {
+      const back = await trackJob(app.job_id, app.status);
+      if (back) { if (app.notes) await fetchJSON(`/applications/${back.id}`, { method: 'PATCH', body: JSON.stringify({ notes: app.notes }) }); load(); }
+    },
+  });
+}
+
 function wire() {
   root.querySelectorAll('.app-card').forEach((el) => {
     el.addEventListener('dragstart', (e) => { el.classList.add('is-dragging'); e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed = 'move'; });
@@ -88,7 +104,7 @@ function wire() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const app = apps.find((a) => String(a.id) === el.dataset.id);
-      openStatusMenu(btn, app.status, (status) => move(app.id, status));
+      openStatusMenu(btn, app.status, (status) => (status === null ? remove(app.id) : move(app.id, status)));
     });
   });
   root.querySelectorAll('.column').forEach((col) => {

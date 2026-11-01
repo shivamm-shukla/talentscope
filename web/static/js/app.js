@@ -143,14 +143,11 @@ async function loadPrefs() {
   if (!SANTA.auth) return localPrefs();
   const result = await fetchJSON('/preferences');
   if (!result.ok) return localPrefs();
-  // work mode / listing type are browsing filters with no server column —
-  // they stay per-device even for signed-in users.
-  const local = localPrefs();
-  return { ...emptyPrefs(), ...result.data, work_modes: local.work_modes, listing_types: local.listing_types };
+  return { ...emptyPrefs(), ...result.data };
 }
 
 function hasPrefs(prefs) {
-  return Boolean(prefs && ((prefs.skills || []).length || (prefs.locations || []).length || prefs.minimum_stipend));
+  return Boolean(prefs && ['skills', 'locations', 'work_modes', 'listing_types'].some((k) => (prefs[k] || []).length) || (prefs && prefs.minimum_stipend));
 }
 
 async function pushLocalPrefsToAccount() {
@@ -159,6 +156,8 @@ async function pushLocalPrefsToAccount() {
   if (local.name) body.name = local.name;
   if (local.skills.length) body.skills = local.skills;
   if (local.locations.length) body.locations = local.locations;
+  if (local.work_modes.length) body.work_modes = local.work_modes;
+  if (local.listing_types.length) body.listing_types = local.listing_types;
   if (local.minimum_stipend) body.minimum_stipend = local.minimum_stipend;
   if (local.github_username) body.github_username = local.github_username;
   if (local.channels.length) body.channels = local.channels;
@@ -342,6 +341,28 @@ function timeAgo(iso) {
 
 const norm = (s) => String(s).trim().toLowerCase();
 
+// Mirrors analysis/locations.py — keep the two alias tables in sync.
+const LOCATION_ALIASES = {
+  bengaluru: 'bangalore', 'bangalore urban': 'bangalore', gurugram: 'gurgaon', 'new delhi': 'delhi',
+  'delhi ncr': 'delhi', ncr: 'delhi', bombay: 'mumbai', 'navi mumbai': 'mumbai', madras: 'chennai',
+  calcutta: 'kolkata', poona: 'pune', secunderabad: 'hyderabad', 'greater noida': 'noida',
+  'work from home': 'remote', wfh: 'remote', anywhere: 'remote', worldwide: 'remote', remote: 'remote',
+};
+
+function canonicalLocation(name) {
+  let key = norm(name).replace(/\s+/g, ' ');
+  key = key.replace(/^remote ?- ?/, '');
+  return LOCATION_ALIASES[key] || key;
+}
+
+function locationMatches(desired, jobLocation, workMode) {
+  const wanted = new Set((desired || []).filter((p) => p.trim()).map(canonicalLocation));
+  if (!wanted.size) return true;
+  const places = new Set(String(jobLocation || '').split(/[,/|;]|\s+(?:and|or|&)\s+/i).filter((p) => p.trim()).map(canonicalLocation));
+  if (workMode === 'remote') places.add('remote');
+  return [...wanted].some((p) => places.has(p));
+}
+
 // Mirrors matching/matcher.py's weights so a guest's local score reads the
 // same as a signed-in user's server score.
 function computeFit(job, prefs) {
@@ -356,18 +377,20 @@ function computeFit(job, prefs) {
     score += 0.6 * (matched.length / wanted.size) * (matched.length / jobSkills.length);
     reasons.push(`Uses your ${matched.slice(0, 3).join(', ')}`);
   }
-  const locations = new Set((prefs.locations || []).map(norm));
-  const locationOk = !locations.size || locations.has(norm(job.location || ''));
+  const locationOk = locationMatches(prefs.locations, job.location, job.work_mode);
   if (locationOk) {
     score += 0.25;
-    if (locations.size) reasons.push(`In ${job.location}`);
+    if ((prefs.locations || []).some((p) => p.trim())) reasons.push(`In ${job.location}`);
   }
   const stipendOk = !prefs.minimum_stipend || job.salary_numeric == null || job.salary_numeric >= prefs.minimum_stipend;
   if (stipendOk) {
     score += 0.15;
     if (prefs.minimum_stipend && job.salary_numeric != null) reasons.push('Meets your stipend');
   }
-  const passes = score > 0 && (!wanted.size || matched.length > 0) && locationOk && stipendOk;
+  // Hard filters, as in matching/matcher.py: unclassified postings pass.
+  const kindOk = (!(prefs.work_modes || []).length || !job.work_mode || prefs.work_modes.includes(job.work_mode))
+    && (!(prefs.listing_types || []).length || !job.listing_type || prefs.listing_types.includes(job.listing_type));
+  const passes = kindOk && score > 0 && (!wanted.size || matched.length > 0) && locationOk && stipendOk;
   return { score: Math.round(score * 100), passes, matched, missing, reasons };
 }
 
@@ -389,8 +412,31 @@ async function trackJob(jobId, status) {
   return created.data;
 }
 
-async function saveJob(job, onChange) {
+// Stop tracking a job. Undo re-creates it at the same status (its status
+// history restarts, which is the honest record of what happened).
+async function untrackJob(job, onChange) {
+  // POST is get-or-create: for an existing application it just returns it.
+  const existing = await fetchJSON('/applications', { method: 'POST', body: JSON.stringify({ job_id: job.id, status: 'saved' }) });
+  if (!existing.ok) return;
+  const previous = existing.data.status;
+  const removed = await fetchJSON(`/applications/${existing.data.id}`, { method: 'DELETE' });
+  if (!removed.ok) { toast('Couldn’t remove that — try again.'); return; }
+  onChange(null);
+  toast(previous === 'saved' ? 'Removed from your saved jobs.' : 'No longer tracking this one.', {
+    label: 'Undo',
+    run: async () => { const back = await trackJob(job.id, previous); if (back) onChange(back.status); },
+  });
+}
+
+// The bookmark is a toggle: save, or un-save when it's only saved. Anything
+// further along (applied, interviewing…) asks first — that's real progress.
+async function saveJob(job, onChange, currentStatus) {
   if (!(await requireAccount('Create a free account to save jobs — Santa will remind you before they close.'))) return;
+  if (currentStatus === 'saved') { untrackJob(job, onChange); return; }
+  if (currentStatus) {
+    toast(`You're tracking this as “${STATUS_META[currentStatus].label}”.`, { label: 'Stop tracking', run: () => untrackJob(job, onChange) });
+    return;
+  }
   const result = await trackJob(job.id, 'saved');
   if (result) {
     onChange(result.status);
@@ -428,6 +474,7 @@ async function shareJob(job) {
   } catch (error) { /* share sheet dismissed */ }
 }
 
+// onPick receives a status key, or null for "Remove from tracker".
 function openStatusMenu(anchor, current, onPick) {
   document.querySelectorAll('.menu-panel').forEach((m) => m.remove());
   const panel = document.createElement('div');
@@ -435,22 +482,42 @@ function openStatusMenu(anchor, current, onPick) {
   panel.setAttribute('role', 'menu');
   panel.innerHTML = Object.entries(STATUS_META).map(([key, meta]) => (
     `<button type="button" role="menuitem" data-status="${key}" class="${key === current ? 'is-current' : ''}"><i class="dot" style="--dot:${meta.color}"></i>${meta.label}${key === current ? ' ✓' : ''}</button>`
-  )).join('');
-  anchor.parentElement.appendChild(panel);
+  )).join('') + (current ? `<hr style="border:0;border-top:1px solid var(--border);margin:4px 6px"><button type="button" role="menuitem" data-status="" style="color:var(--bad)">${ICON.close.replace('<svg', '<svg width="14" height="14"')}Remove from tracker</button>` : '');
+  // Fixed to the viewport (not inside the card) so scroll containers like
+  // the board can't clip it; opens below the button, or above if no room.
+  document.body.appendChild(panel);
+  const rect = anchor.getBoundingClientRect();
+  const width = Math.max(200, panel.offsetWidth);
+  panel.style.position = 'fixed';
+  panel.style.left = `${Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8)}px`;
+  const below = window.innerHeight - rect.bottom;
+  if (below >= panel.offsetHeight + 12 || below > rect.top) {
+    panel.style.top = `${rect.bottom + 6}px`;
+    panel.style.transformOrigin = 'top right';
+  } else {
+    panel.style.top = `${rect.top - panel.offsetHeight - 6}px`;
+    panel.style.transformOrigin = 'bottom right';
+  }
+  panel.style.bottom = 'auto';
+  panel.style.right = 'auto';
+  const onScroll = () => close();
+  window.addEventListener('scroll', onScroll, { passive: true, once: true });
   const close = (event) => {
-    if (event && panel.contains(event.target)) return;
+    if (event && event.target && panel.contains(event.target)) return;
     panel.remove();
+    window.removeEventListener('scroll', onScroll);
     document.removeEventListener('click', close, true);
   };
   setTimeout(() => document.addEventListener('click', close, true));
   panel.querySelectorAll('[data-status]').forEach((button) => {
-    button.addEventListener('click', () => { panel.remove(); document.removeEventListener('click', close, true); onPick(button.dataset.status); });
+    button.addEventListener('click', () => { panel.remove(); document.removeEventListener('click', close, true); onPick(button.dataset.status || null); });
   });
 }
 
 async function changeStatus(job, anchor, current, onChange) {
   if (!(await requireAccount('Create a free account to track where each application stands.'))) return;
   openStatusMenu(anchor, current, async (status) => {
+    if (status === null) { untrackJob(job, onChange); return; }
     const result = await trackJob(job.id, status);
     if (result) { onChange(status); toast(`Moved to ${STATUS_META[status].label}.`); }
   });
@@ -480,6 +547,7 @@ function renderJobCard(item, prefs) {
   const status = item.application_status;
   const card = document.createElement('article');
   card.className = 'card card-hover job-card reveal';
+  card.dataset.jobId = job.id;
   card.tabIndex = 0;
   card.setAttribute('aria-label', `${job.title} at ${job.company}`);
   card.innerHTML = `
@@ -491,7 +559,7 @@ function renderJobCard(item, prefs) {
       </div>
       <div class="job-card-side">
         ${score != null && score > 0 ? `<span class="match-pill ${score >= 70 ? '' : 'mid'}">${score}% match</span>` : ''}
-        <button type="button" class="icon-btn ${status ? 'is-on' : ''}" data-act="save" aria-label="${status ? 'Tracking' : 'Save'}" title="${status ? STATUS_META[status].label : 'Save for later'}">${ICON.bookmark}</button>
+        <button type="button" class="icon-btn ${status ? 'is-on' : ''}" data-act="save" aria-pressed="${Boolean(status)}" aria-label="${status === 'saved' ? 'Remove from saved' : status ? 'Tracking' : 'Save'}" title="${status === 'saved' ? 'Saved — tap to remove' : status ? STATUS_META[status].label : 'Save for later'}">${ICON.bookmark}</button>
       </div>
     </div>
     <div class="job-meta-row">
@@ -515,7 +583,9 @@ function renderJobCard(item, prefs) {
     item.application_status = next;
     const fresh = renderJobCard(item, prefs);
     fresh.classList.add('is-in');
-    card.replaceWith(fresh);
+    // Look the card up again: an async callback (e.g. Undo) may fire after
+    // this card was already replaced by a newer render.
+    (document.querySelector(`.job-card[data-job-id="${job.id}"]`) || card).replaceWith(fresh);
     window.dispatchEvent(new CustomEvent('santa:tracked', { detail: { jobId: job.id, status: next } }));
   };
   card.addEventListener('click', (event) => {
@@ -526,7 +596,7 @@ function renderJobCard(item, prefs) {
     }
     event.stopPropagation();
     const action = act.dataset.act;
-    if (action === 'save') saveJob(job, update);
+    if (action === 'save') saveJob(job, update, status);
     if (action === 'apply') applyToJob(job, update);
     if (action === 'share') shareJob(job);
     if (action === 'status') changeStatus(job, act, status, update);

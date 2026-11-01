@@ -32,6 +32,10 @@
         <div class="chips" id="type-chips"></div>
       </div>
       <div class="step-section">
+        <h3>How do you like to work?</h3>
+        <div class="chips" id="mode-chips"></div>
+      </div>
+      <div class="step-section">
         <h3>Your name <span class="field-hint">optional</span></h3>
         <input class="input" id="name-input" placeholder="What should Santa call you?" autocomplete="given-name">
       </div>
@@ -104,6 +108,7 @@ const SKILLS = ['python', 'javascript', 'react', 'java', 'sql', 'node.js', 'mach
 const SKILL_LABELS = { 'node.js': 'Node.js', 'c++': 'C++', sql: 'SQL' };
 const CITIES = ['Remote', 'Bangalore', 'Hyderabad', 'Pune', 'Mumbai', 'Delhi', 'Gurgaon', 'Noida', 'Chennai'];
 const TYPES = [['internship', 'Internships'], ['job', 'Full-time jobs']];
+const MODES = [['remote', 'Remote'], ['hybrid', 'Hybrid'], ['onsite', 'In office']];
 const label = (s) => SKILL_LABELS[s] || s.replace(/\b\w/g, (c) => c.toUpperCase());
 
 let prefs = emptyPrefs();
@@ -135,6 +140,7 @@ function render() {
   chipGroup(document.getElementById('skill-chips'), SKILLS, 'skills', label);
   chipGroup(document.getElementById('city-chips'), CITIES, 'locations', (v) => v);
   chipGroup(document.getElementById('type-chips'), TYPES.map(([v]) => v), 'listing_types', (v) => Object.fromEntries(TYPES)[v]);
+  chipGroup(document.getElementById('mode-chips'), MODES.map(([v]) => v), 'work_modes', (v) => Object.fromEntries(MODES)[v]);
   document.getElementById('name-input').value = prefs.name || '';
   document.getElementById('github-input').value = prefs.github_username || '';
   document.getElementById('telegram-input').value = prefs.telegram_chat_id || '';
@@ -163,7 +169,7 @@ async function persist() {
   collect();
   saveLocalPrefs(prefs);
   if (!SANTA.auth) return;
-  const body = { skills: prefs.skills, locations: prefs.locations, channels: prefs.channels };
+  const body = { skills: prefs.skills, locations: prefs.locations, work_modes: prefs.work_modes, listing_types: prefs.listing_types, channels: prefs.channels };
   if (prefs.name) body.name = prefs.name;
   if (prefs.github_username) body.github_username = prefs.github_username;
   if (prefs.telegram_chat_id) body.telegram_chat_id = prefs.telegram_chat_id;
