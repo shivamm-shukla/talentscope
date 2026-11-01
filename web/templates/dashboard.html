@@ -25,10 +25,13 @@
     <div class="filters">
       <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input class="input" type="search" id="q" placeholder="Search role, company, skill" aria-label="Search jobs"></label>
+      <button type="button" class="icon-btn filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-selects" aria-label="Filters" title="Filters"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg><i class="filter-dot" hidden></i></button>
+      <div class="filter-selects" id="filter-selects">
       <select class="select select-sm" id="f-type" aria-label="Type"><option value="">Any type</option><option value="internship">Internship</option><option value="job">Job</option></select>
       <select class="select select-sm" id="f-mode" aria-label="Work mode"><option value="">Any mode</option><option value="remote">Remote</option><option value="hybrid">Hybrid</option><option value="onsite">Onsite</option></select>
       <select class="select select-sm" id="f-pay" aria-label="Minimum stipend"><option value="">Any stipend</option><option value="10000">₹10k+</option><option value="20000">₹20k+</option><option value="30000">₹30k+</option><option value="50000">₹50k+</option></select>
       <select class="select select-sm" id="f-sort" aria-label="Sort"><option value="fit">Best fit</option><option value="new">Newest</option><option value="deadline">Closing soon</option></select>
+      </div>
     </div>
   </div>
 </section>
@@ -224,7 +227,7 @@ function renderNotes() {
 async function load() {
   state.prefs = await loadPrefs();
   greet();
-  if (state.prefs.listing_types && state.prefs.listing_types.length === 1 && !$('f-type').value) $('f-type').value = state.prefs.listing_types[0];
+  if (state.prefs.listing_types && state.prefs.listing_types.length === 1 && !$('f-type').value) $('f-type').value = state.prefs.listing_types[0]; syncFilterDot();
   const requests = [fetchJSON('/jobs')];
   if (SANTA.auth) requests.push(fetchJSON('/matches'), fetchJSON('/applications'), fetchJSON('/applications/stats'), fetchJSON('/resume'));
   const [jobs, matches, apps, stats, resumes] = await Promise.all(requests);
@@ -241,6 +244,15 @@ async function load() {
 
 ['q', 'f-type', 'f-mode', 'f-pay', 'f-sort'].forEach((id) => $(id).addEventListener(id === 'q' ? 'input' : 'change', () => { state.shown = PAGE; renderFeed(); }));
 $('more').addEventListener('click', () => { state.shown += PAGE; renderFeed(); });
+// Phones: the four selects live behind a Filters button; a dot marks active ones.
+$('filter-toggle').addEventListener('click', () => {
+  const open = $('filter-selects').classList.toggle('is-open');
+  $('filter-toggle').setAttribute('aria-expanded', String(open));
+});
+const syncFilterDot = () => {
+  $('filter-toggle').querySelector('.filter-dot').hidden = !['f-type', 'f-mode', 'f-pay'].some((id) => $(id).value);
+};
+['f-type', 'f-mode', 'f-pay'].forEach((id) => $(id).addEventListener('change', syncFilterDot));
 // Load the next page automatically as the list's end scrolls into view.
 if ('IntersectionObserver' in window) {
   new IntersectionObserver((entries) => {

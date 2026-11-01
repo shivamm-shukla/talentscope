@@ -5,6 +5,18 @@
   <div><h1>Preferences</h1><p>Personalise how Santa finds and brings opportunities to you.</p></div>
 </div>
 <div class="page-scroll">
+<section class="you-hub" aria-label="You">
+  <div class="card you-card reveal">
+    <span class="avatar avatar-lg" data-user-initial>G</span>
+    <div class="grow"><strong data-user-name>Guest</strong><span class="soft small" data-user-sub>Browsing freely</span></div>
+    <button type="button" class="btn btn-primary btn-sm" data-signin data-guest-only>Sign in</button>
+  </div>
+  <a class="card resume-card reveal" href="{{ url_for('pages.resume_page') }}">
+    <span class="resume-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></span>
+    <div class="grow"><strong>Santa Resume</strong><span class="soft small" id="resume-hub-status">Let Santa draft one from your skills</span></div>
+    <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+  </a>
+</section>
 <div class="settings-grid">
   <div>
     <section class="card settings-card reveal">
@@ -222,7 +234,16 @@ $('linkedin-file').addEventListener('change', async (event) => {
   else $('linkedin-status').textContent = data.error || 'Could not import that file.';
 });
 
+async function loadResumeStatus() {
+  if (!SANTA.auth) { $('resume-hub-status').textContent = 'Free AI draft with an account'; return; }
+  const result = await fetchJSON('/resume');
+  const latest = result.ok && result.data[0];
+  $('resume-hub-status').textContent = !latest ? 'Let Santa draft one from your skills'
+    : latest.is_final ? `Version ${latest.version} · finalized` : `Version ${latest.version} · draft, finish it?`;
+}
+
 async function load() {
+  loadResumeStatus();
   prefs = await loadPrefs();
   prefs.channels = prefs.channels || [];
   render();

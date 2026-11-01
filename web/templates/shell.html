@@ -52,7 +52,6 @@
     <div class="topbar-actions">
       {{ theme_toggle() }}
       <button type="button" class="btn btn-secondary btn-sm" data-signin data-guest-only>Log in</button>
-      <a class="icon-btn" href="{{ url_for('pages.resume_page') }}" aria-label="Resume" data-auth-only hidden>{{ icon('resume') }}</a>
     </div>
   </header>
 
@@ -65,7 +64,9 @@
 
   <nav class="tabbar" aria-label="Santa tabs">
     {% for key, label, href in tabs %}
-      <a class="tab {{ 'is-active' if active == key }}" href="{{ href }}" {% if active == key %}aria-current="page"{% endif %}>{{ icon(key) }}<span>{{ label }}</span></a>
+      {# Phones keep five tabs: Resume lives inside the "You" hub, so it lights up "You". #}
+      {% set on = active == key or (key == 'preferences' and active == 'resume') %}
+      <a class="tab {{ 'is-active' if on }}" href="{{ href }}" {% if on %}aria-current="page"{% endif %}>{{ icon(key) }}<span>{{ label }}</span></a>
     {% endfor %}
   </nav>
 </div>

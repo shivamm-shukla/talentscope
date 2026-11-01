@@ -1,9 +1,10 @@
 {% extends "shell.html" %}
 {% block title %}Resume — Santa{% endblock %}
 {% block content %}
+<a class="icon-btn back-btn phone-only" href="{{ url_for('pages.preferences_page') }}" aria-label="Back to You">{% from "_icons.html" import icon %}{{ icon('back') }}</a>
 <div class="page-head">
   <div><h1>Santa Resume</h1><p>Drafted from your GitHub, LinkedIn and skills. Edit anything, keep every version.</p></div>
-  <button type="button" class="btn btn-primary" id="generate" data-auth-only hidden>✨ Generate new version</button>
+  <button type="button" class="btn btn-primary" id="generate" data-auth-only hidden>✨ <span class="wide-only">Generate new version</span><span class="phone-only">Generate</span></button>
 </div>
 <div class="page-scroll">
 
@@ -128,7 +129,7 @@ $('generate').addEventListener('click', async () => {
   button.textContent = 'Santa is writing…';
   const result = await fetchJSON('/resume/generate', { method: 'POST' });
   button.disabled = false;
-  button.textContent = '✨ Generate new version';
+  button.innerHTML = '✨ <span class="wide-only">Generate new version</span><span class="phone-only">Generate</span>';
   if (!result.ok) { showError((result.data && result.data.error) || 'Could not generate a resume right now.'); return; }
   versions = [result.data, ...versions];
   renderEditor(result.data);
