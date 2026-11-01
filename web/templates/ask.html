@@ -1,77 +1,115 @@
-{% extends "base.html" %}
-{% block title %}Ask — Santa{% endblock %}
+{% extends "shell.html" %}
+{% block title %}Ask Santa — Santa{% endblock %}
 {% block content %}
-<section class="feed-header">
-  <h1>Ask santa anything</h1>
-  <p class="muted">Grounded in the live job database — try "What skills are trending for ML interns right now?"</p>
-</section>
-
-<section class="card auth-card wide">
-  <form id="ask-form" class="form" novalidate>
-    <label>Your question
-      <textarea name="question" rows="3" placeholder="What remote internships need React?" required></textarea>
-    </label>
-    <p class="form-error" id="ask-error" hidden></p>
-    <button type="submit" class="btn btn-primary btn-block" id="ask-submit">Ask</button>
+<div class="page-head chat-head">
+  <div><h1>Ask Santa ✨</h1><p>Your AI career companion.</p></div>
+  <button type="button" class="btn btn-ghost btn-sm" id="clear-chat" hidden>New chat</button>
+</div>
+<section class="chat">
+  <div class="chat-log page-scroll" id="log" aria-live="polite">
+    <div class="chat-intro" id="intro">
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="120" height="105">
+      <p class="soft">Answers come from the live postings Santa is watching. Try one of these:</p>
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+  </div>
+  <form class="composer" id="composer">
+    <button type="button" class="icon-btn plus" id="ideas" aria-label="Show suggestions" title="Ideas to ask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <div class="composer-box">
+      <label class="sr-only" for="question">Ask Santa</label>
+      <textarea id="question" rows="1" placeholder="Ask Santa anything…" required></textarea>
+      <button type="submit" class="icon-btn send" id="send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
   </form>
-</section>
-
-<section id="answer-card" class="card auth-card wide answer-card" hidden>
-  <p class="answer-text" id="answer-text"></p>
-  <div id="answer-sources" class="answer-sources"></div>
 </section>
 {% endblock %}
 {% block scripts %}
 <script>
-const form = document.getElementById('ask-form');
-const errorEl = document.getElementById('ask-error');
-const submitBtn = document.getElementById('ask-submit');
-const answerCard = document.getElementById('answer-card');
-const answerText = document.getElementById('answer-text');
-const answerSources = document.getElementById('answer-sources');
+const SUGGESTIONS = [
+  'What skills are trending for ML interns in Bangalore?',
+  'Which remote internships need React?',
+  'What stipend should I expect as a 2nd-year?',
+  'Give me a 4-week plan to become job-ready in backend',
+];
+const HISTORY_KEY = 'santa-chat';
+const log = document.getElementById('log');
+const intro = document.getElementById('intro');
+const input = document.getElementById('question');
+const send = document.getElementById('send');
+let history = [];
+try { history = JSON.parse(sessionStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { history = []; }
 
-const MAX_SOURCES_SHOWN = 5;
-
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  errorEl.hidden = true;
-  const question = form.question.value.trim();
-  if (!question) return;
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Thinking…';
-  answerCard.hidden = true;
-
-  try {
-    const response = await fetch('/qa', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
-    });
-    if (response.status === 401) {
-      window.location.href = "{{ url_for('pages.login_page') }}";
-      return;
+function bubble(role, text, sources) {
+  const row = document.createElement('div');
+  if (role === 'me') {
+    row.className = 'bubble me';
+    row.textContent = text;
+  } else {
+    row.className = 'bubble-row';
+    row.innerHTML = `<span class="mascot-bubble"><img src="/static/assets/santa-mascot.svg" alt=""></span><div class="bubble santa"></div>`;
+    const b = row.querySelector('.bubble');
+    if (text === null) b.innerHTML = '<span class="typing" aria-label="Santa is typing"><i></i><i></i><i></i></span>';
+    else {
+      b.textContent = text;
+      if (sources && sources.length) {
+        const s = document.createElement('div');
+        s.className = 'sources';
+        s.innerHTML = sources.slice(0, 5).map((url, i) => `<a class="tag tag-accent" href="${escapeHTML(url)}" target="_blank" rel="noopener">Listing ${i + 1} ↗</a>`).join('');
+        b.appendChild(s);
+      }
     }
-    const data = await response.json();
-    if (!response.ok) {
-      errorEl.textContent = data.error || 'Santa could not answer that just now.';
-      errorEl.hidden = false;
-      return;
-    }
-    answerText.textContent = data.text;
-    const sources = (data.sources || []).slice(0, MAX_SOURCES_SHOWN);
-    answerSources.innerHTML = sources.length
-      ? '<p class="muted">Referenced listings</p>' +
-        sources.map((url) => `<a class="btn btn-secondary btn-sm" href="${url}" target="_blank" rel="noopener">View listing</a>`).join('')
-      : '';
-    answerCard.hidden = false;
-  } catch (error) {
-    errorEl.textContent = 'Something went wrong. Try again in a moment.';
-    errorEl.hidden = false;
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Ask';
   }
+  log.appendChild(row);
+  intro.hidden = true;
+  log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' });
+  document.getElementById('clear-chat').hidden = false;
+  return row;
+}
+
+function persist() { try { sessionStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-30))); } catch (e) { /* ignore */ } }
+
+async function ask(question) {
+  if (!question.trim()) return;
+  if (!(await requireAccount('Ask Santa runs on AI, so it needs a free account — that keeps it fast for everyone.'))) {
+    input.value = question;
+    return;
+  }
+  input.value = '';
+  autosize();
+  bubble('me', question);
+  history.push({ role: 'me', text: question });
+  const pending = bubble('santa', null);
+  send.disabled = true;
+  const result = await fetchJSON('/qa', { method: 'POST', body: JSON.stringify({ question }) });
+  send.disabled = false;
+  pending.remove();
+  const text = result.ok ? result.data.text : ((result.data && result.data.error) ? 'I couldn’t answer that just now — give me a moment and try again.' : 'Something went wrong on my side. Try again?');
+  const sources = result.ok ? result.data.sources : [];
+  bubble('santa', text, sources);
+  history.push({ role: 'santa', text, sources });
+  persist();
+  input.focus();
+}
+
+function autosize() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 160) + 'px'; }
+
+document.getElementById('suggestions').innerHTML = SUGGESTIONS.map((s) => `<button type="button" class="chip">${escapeHTML(s)}</button>`).join('');
+document.querySelectorAll('#suggestions .chip').forEach((chip) => chip.addEventListener('click', () => ask(chip.textContent)));
+document.getElementById('composer').addEventListener('submit', (e) => { e.preventDefault(); ask(input.value); });
+input.addEventListener('input', autosize);
+input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); } });
+
+history.forEach((m) => bubble(m.role, m.text, m.sources));
+document.getElementById('clear-chat').addEventListener('click', () => {
+  history = [];
+  persist();
+  log.querySelectorAll('.bubble, .bubble-row').forEach((el) => el.remove());
+  intro.hidden = false;
+  document.getElementById('clear-chat').hidden = true;
+});
+document.getElementById('ideas').addEventListener('click', () => {
+  intro.hidden = false;
+  log.scrollTo({ top: 0, behavior: 'smooth' });
 });
 </script>
 {% endblock %}

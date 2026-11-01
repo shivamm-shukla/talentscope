@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="web/static/assets/logo.svg" width="72" height="72" alt="Santa logo">
+<img src="web/static/assets/santa-icon-192.png" width="72" height="72" alt="Santa logo">
 
 # Santa
 
@@ -73,23 +73,34 @@ The product value is for students; the engineering rigor is for me.
 
 ### For users (CS/BCA students)
 
-- **Dashboard** (`/`, `/app`) — signup, preferences, and a proactive home feed (matches,
-  application status, resume status, response-rate stats all in one place), with
-  light/dark theme
+- **Guest-first** — browse every live posting, open any job and see market insights with
+  no account. Sign-up/log-in appears as an inline sheet only at the moment an action
+  needs it (save, track, apply, alerts, AI features), then the action carries on.
+  Onboarding (`/welcome`: skills & cities → GitHub/LinkedIn → alerts) is skippable at
+  every step; with no preferences the feed simply shows everything
+- **Home** (`/app`) — a companion-style feed: greeting, Santa's proactive notes (deadlines
+  on saved jobs, follow-up nudges, the skill that would unlock the most postings),
+  at-a-glance tiles, For you / All / Saved / Applied tabs with filters, and per-job
+  "why this fits you"
+- **Job detail** (`/app/jobs/<id>`) — description, deadline countdown, match score,
+  skills you have vs. skills to build, AI company brief, status + private notes
+- **Application board** (`/app/applications`) — drag-and-drop Kanban with response/offer
+  rate stats
+- **Market insights** (`/app/insights`) — top skills, hiring cities and stipend ranges
+  over 30/90/180 days, with your own skills highlighted
+- Responsive from phone (tab bar, bottom sheets, sticky apply) to desktop, light/dark
+  theme, reduced-motion-safe animations
 - **Daily-curated internship/job feed** scraped from Internshala (Playwright) and Remotive API, filtered to CS/BCA-relevant postings only
 - **Classification** of every posting into listing type (internship/job), work mode (remote/onsite/hybrid), pay type, duration, and target year — so the feed reads like a briefing, not a search-results page
 - **Retention policy** — postings past their estimated application window are never stored or shown
-- **Application tracker** — mark a posting saved/applied/interviewing/offer/rejected/withdrawn right from the feed, with a full status-history and response-rate/offer-rate stats computed from it
+- **Application tracker** — mark a posting saved/applied/interviewing/offer/rejected/withdrawn right from the feed, with a full status-history and response-rate/offer-rate stats computed from it; un-save or remove anything (with undo)
 - **Ghost-job / repost detection** — postings that disappear from a scrape and reappear later (kept artificially alive by relisting) get flagged inline, deterministically, no LLM call needed
 - **Deadline reminders** — for Internshala postings, a real application deadline is scraped from the posting's own detail page (not a guess); if you've saved/applied to one, you get a one-time nudge as it approaches. Remotive has no such field, so those postings never claim a deadline
 - **AI company research briefs** — a short, cached-per-company summary generated from that company's own posting text, available per job
 - **AI resume builder** (`/app/resume`) — drafts a resume from your synced GitHub, LinkedIn, and skills; edit sections, keep every generated version, copy/download the text
-- **Personalised alerts** via email and Telegram, matched against user-set skills, location, and stipend preferences, ranked by how closely a job's skill demands fit what the user actually knows
+- **Personalised alerts** via email and Telegram, matched against user-set skills, location (alias-aware: Bengaluru = Bangalore, WFH = Remote), stipend, work mode and internship/job preferences, ranked by how closely a job's skill demands fit what the user actually knows
 - **GitHub skill sync** — link a GitHub username and santa periodically scans public repos to keep the skills list current; **LinkedIn import** — upload a LinkedIn data export (self-service, no scraping) to pull in positions, education, and skills the same way. Both feed the same skill vocabulary and also seed the resume builder
-- **Natural-language Q&A** (a corner entry point next to the theme toggle) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
-
-Not yet exposed: a market-trends dashboard (skill/city/stipend trends) — the
-analysis logic exists in `analysis/trends.py` but no route surfaces it yet.
+- **Ask Santa** (`/app/ask`, chat-style) — ask "What skills are trending for ML interns in Bangalore?" and get a grounded answer powered by Google Gemini over the live job database
 
 ### For me (the engineer)
 
@@ -192,7 +203,7 @@ Full test strategy and rationale: [`TESTING.md`](./TESTING.md).
 - [x] ≥70% coverage (~99% on the measured `core`/`db` modules; 154 tests)
 - [x] Structured JSON logging
 - [x] Render deployment (code/config ready — see "Deploying" below for the manual account-setup steps)
-- [x] Web UI (landing, signup/login, preferences, dashboard) with light/dark theme
+- [x] Web UI: guest-first companion redesign (landing, skippable onboarding, feed, job detail, application board, insights, Ask Santa, preferences, resume), responsive with light/dark theme
 - [x] CS/BCA relevance filter + listing taxonomy (work mode, pay type, duration, target year) at ingestion
 - [x] Expiry-based retention (don't store/list postings past their application window)
 - [x] GitHub skill sync + LinkedIn data-export import
@@ -266,7 +277,7 @@ background workers/cron jobs).
      users with `email` in their preferred channels
    - `TELEGRAM_BOT_TOKEN` — for users with `telegram` in their preferred channels
 
-The web service only serves auth, preferences, matches, the application tracker, resume builder, company briefs and Q&A — it never runs the scrape
+The web service only serves pages and the JSON API (auth, jobs feed, preferences, matches, tracker, trends, resume builder, company briefs, Q&A) — it never runs the scrape
 pipeline itself, so Render's free-tier idle sleep has no effect on data freshness.
 
 ---

@@ -177,3 +177,30 @@ def test_applications_stats_reflects_tracked_progress(client) -> None:
     assert body["response_count"] == 1
     assert body["response_rate"] == 1.0
     assert body["offer_count"] == 0
+
+
+def test_delete_application_untracks_the_job(client) -> None:
+    app = client.application
+    signup(client)
+    job_id = seed_job(app)
+    created = client.post("/applications", json={"job_id": job_id}).get_json()
+
+    response = client.delete(f"/applications/{created['id']}")
+
+    assert response.status_code == 204
+    assert client.get("/applications").get_json() == []
+    assert client.delete(f"/applications/{created['id']}").status_code == 404
+
+
+def test_delete_application_requires_ownership(client) -> None:
+    app = client.application
+    signup(client)
+    job_id = seed_job(app)
+    created = client.post("/applications", json={"job_id": job_id}).get_json()
+    client.post("/auth/logout")
+    client.post(
+        "/auth/signup",
+        json={"email": "other@example.test", "password": "password123"},
+    )
+
+    assert client.delete(f"/applications/{created['id']}").status_code == 404

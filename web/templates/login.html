@@ -1,43 +1,41 @@
-{% extends "base.html" %}
+{% extends "public.html" %}
 {% block title %}Log in — Santa{% endblock %}
+{% block main_class %}auth-wrap{% endblock %}
 {% block content %}
 <section class="card auth-card">
+  <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="92" height="80">
   <h1>Welcome back</h1>
-  <form id="login-form" class="form" novalidate>
-    <label>Email
-      <input type="email" name="email" required autocomplete="email">
+  <p class="lead">Santa kept an eye out while you were away.</p>
+  <form id="auth-form" class="form" novalidate>
+    <label class="field">Email
+      <input class="input" type="email" name="email" required autocomplete="email" placeholder="you@college.edu">
     </label>
-    <label>Password
-      <input type="password" name="password" required autocomplete="current-password">
+    <label class="field">Password
+      <input class="input" type="password" name="password" required autocomplete="current-password">
     </label>
     <p class="form-error" id="form-error" hidden></p>
     <button type="submit" class="btn btn-primary btn-block">Log in</button>
   </form>
-  <p class="muted">New here? <a href="{{ url_for('pages.signup_page') }}">Create an account</a></p>
+  <div class="auth-foot">
+    <span>New here? <a href="{{ url_for('pages.signup_page') }}">Create an account</a></span>
+    <div class="divider">or</div>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('pages.dashboard') }}">Skip — just browse jobs →</a>
+  </div>
 </section>
 {% endblock %}
 {% block scripts %}
 <script>
-document.getElementById('login-form').addEventListener('submit', async (event) => {
+document.getElementById('auth-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.target;
   const errorEl = document.getElementById('form-error');
+  const button = form.querySelector('[type=submit]');
   errorEl.hidden = true;
-  const body = {
-    email: form.email.value,
-    password: form.password.value,
-  };
-  const response = await fetch('/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (response.ok) {
-    window.location.href = "{{ url_for('pages.dashboard') }}";
-    return;
-  }
-  const data = await response.json().catch(() => ({}));
-  errorEl.textContent = data.error || 'Invalid email or password.';
+  button.disabled = true;
+  const ok = await authenticate('login', form.email.value, form.password.value);
+  button.disabled = false;
+  if (ok === true) { window.location.href = "{{ url_for('pages.dashboard') }}"; return; }
+  errorEl.textContent = ok;
   errorEl.hidden = false;
 });
 </script>

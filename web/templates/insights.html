@@ -1,0 +1,126 @@
+{% extends "shell.html" %}
+{% block title %}Market Insights — Santa{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Market Trends</h1><p>Real-time insights for internships &amp; jobs in India, from every posting Santa has seen.</p></div>
+  <select class="select select-sm" id="days" aria-label="Period">
+    <option value="30">Last 30 days</option><option value="90" selected>Last 3 months</option><option value="180">Last 6 months</option>
+  </select>
+</div>
+<div class="page-scroll">
+<section class="insight-summary" id="summary"></section>
+<section class="charts" id="charts">
+  <div class="skeleton" style="min-height:320px"></div><div class="skeleton" style="min-height:320px"></div><div class="skeleton" style="min-height:320px"></div>
+</section>
+<div class="chart-tip" id="tip" hidden></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const tip = document.getElementById('tip');
+let prefs = emptyPrefs();
+
+function showTip(event, text) {
+  tip.textContent = text;
+  tip.hidden = false;
+  const rect = event.currentTarget.getBoundingClientRect();
+  tip.style.left = `${rect.left + rect.width / 2}px`;
+  tip.style.top = `${rect.top}px`;
+}
+const hideTip = () => { tip.hidden = true; };
+
+function table(caption, head, rows) {
+  return `<table class="sr-only"><caption>${caption}</caption><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((c) => `<td>${escapeHTML(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+}
+
+function barChart(title, sub, entries, total, highlight) {
+  const max = Math.max(1, ...entries.map(([, v]) => v));
+  const mine = new Set((highlight || []).map(norm));
+  const anyMine = entries.some(([k]) => mine.has(norm(k)));
+  return `<article class="card chart-card reveal">
+    <h3>${title}</h3><p class="sub">${sub}</p>
+    ${entries.length ? `<div class="bars" aria-hidden="true">${entries.map(([k, v], i) => {
+      const share = total ? Math.round((v / total) * 100) : 0;
+      return `<div class="bar-row" data-tip="${escapeHTML(k)}: ${v} posting${v === 1 ? '' : 's'} (${share}%)"><span class="label" title="${escapeHTML(prettySkill(k))}">${escapeHTML(prettySkill(k))}</span><span class="track"><span class="fill ${mine.has(norm(k)) ? 'is-you' : ''}" style="--i:${i}" data-w="${(v / max) * 100}"></span></span><span class="val">${share}%</span></div>`;
+    }).join('')}</div>${anyMine ? '<p style="margin-top:14px"><span class="legend-you"><i></i>Skills you already have</span></p>' : ''}`
+    : '<p class="muted small">Not enough postings in this period yet.</p>'}
+    ${table(title, ['Item', 'Postings'], entries)}
+  </article>`;
+}
+
+// Cities: donut over a fixed categorical order (--cat-1..5, validated), with
+// everything past the top five folded into a neutral "Others" slice.
+function donutChart(title, sub, entries, total) {
+  const top = entries.slice(0, 5);
+  const rest = entries.slice(5).reduce((sum, [, v]) => sum + v, 0) + Math.max(0, total - entries.reduce((s2, [, v]) => s2 + v, 0));
+  const slices = [...top.map(([k, v], i) => [k, v, `var(--cat-${i + 1})`]), ...(rest ? [['Others', rest, 'var(--cat-other)']] : [])];
+  const sum = slices.reduce((s2, [, v]) => s2 + v, 0) || 1;
+  const r = 60;
+  const c = 2 * Math.PI * r;
+  const gap = slices.length > 1 ? 2 : 0;
+  let offset = 0;
+  const circles = slices.map(([k, v, color], i) => {
+    const len = (v / sum) * c;
+    const seg = `<circle class="seg" r="${r}" cx="84" cy="84" stroke="${color}" stroke-dasharray="0 ${c}" data-dash="${Math.max(0, len - gap)} ${c}" stroke-dashoffset="${-offset}" data-tip="${escapeHTML(k)}: ${v} posting${v === 1 ? '' : 's'} (${Math.round((v / sum) * 100)}%)"></circle>`;
+    offset += len;
+    return seg;
+  }).join('');
+  const lead = slices[0];
+  return `<article class="card chart-card reveal">
+    <h3>${title}</h3><p class="sub">${sub}</p>
+    ${slices.length ? `<div class="donut-wrap">
+      <div class="donut"><svg viewBox="0 0 168 168" aria-hidden="true">${circles}</svg>
+        <div class="center">${escapeHTML(lead[0])}<b>${Math.round((lead[1] / sum) * 100)}%</b></div></div>
+      <ul class="legend">${slices.map(([k, v, color]) => `<li><i style="background:${color}"></i><span>${escapeHTML(k)}</span><span>${Math.round((v / sum) * 100)}%</span></li>`).join('')}</ul>
+    </div>` : '<p class="muted small">Not enough postings in this period yet.</p>'}
+    ${table(title, ['City', 'Postings'], slices.map(([k, v]) => [k, v]))}
+  </article>`;
+}
+
+function columnChart(title, sub, entries) {
+  const max = Math.max(1, ...entries.map(([, v]) => v));
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+  return `<article class="card chart-card reveal">
+    <h3>${title}</h3><p class="sub">${sub}</p>
+    ${total ? `<div class="cols" aria-hidden="true">${entries.map(([k, v], i) => `<div class="col" data-tip="₹${k}/month: ${v} internship${v === 1 ? '' : 's'}"><span class="v">${Math.round((v / total) * 100)}%</span><span class="colfill" style="--i:${i}" data-h="${(v / max) * 100}"></span></div>`).join('')}</div>
+    <div class="col-labels" aria-hidden="true">${entries.map(([k]) => `<span>${k}</span>`).join('')}</div>` : '<p class="muted small">No internship stipends listed in this period.</p>'}
+    ${table(title, ['Monthly stipend', 'Internships'], entries)}
+  </article>`;
+}
+
+async function load() {
+  const days = document.getElementById('days').value;
+  const [result, loaded] = await Promise.all([fetchJSON(`/trends?days=${days}`), loadPrefs()]);
+  prefs = loaded;
+  if (!result.ok) return;
+  const t = result.data;
+  const skills = t.skills;
+  const top5 = skills.slice(0, 5).map(([k]) => k);
+  const have = top5.filter((s) => prefs.skills.map(norm).includes(norm(s)));
+  const missingTop = top5.find((s) => !have.includes(s));
+  document.getElementById('summary').innerHTML = `
+    <article class="card reveal"><p class="soft small">Postings analysed</p><p class="big-number">${t.total_jobs}</p><p class="muted small">in the ${document.getElementById('days').selectedOptions[0].textContent.toLowerCase()}</p></article>
+    <article class="card reveal">${prefs.skills.length && top5.length
+      ? `<p class="soft small">You vs. the market</p><p class="big-number">${have.length}<span class="muted" style="font-size:1.1rem"> / ${top5.length}</span></p><p class="muted small">of the most-asked skills are already yours${missingTop ? ` — <b>${escapeHTML(missingTop)}</b> would be a smart next one` : ' — great coverage!'}</p>`
+      : `<p class="soft small">You vs. the market</p><p style="margin:8px 0 12px">Add your skills and Santa will show how you stack up.</p><a class="btn btn-secondary btn-sm" href="/welcome">Add my skills</a>`}</article>`;
+  document.getElementById('charts').innerHTML =
+    barChart('Top Skills in Demand', 'Share of postings asking for each skill', skills, t.total_jobs, prefs.skills) +
+    donutChart('Top Hiring Cities', 'Share of city mentions — a multi-city posting counts for each', t.locations, t.location_total) +
+    columnChart('Stipend Ranges', 'Internships, per month', t.stipends);
+  const charts = document.getElementById('charts');
+  charts.querySelectorAll('[data-tip]').forEach((el) => {
+    el.addEventListener('mouseenter', (e) => showTip(e, el.dataset.tip));
+    el.addEventListener('mouseleave', hideTip);
+  });
+  reveal(document);
+  requestAnimationFrame(() => setTimeout(() => {
+    charts.querySelectorAll('.fill').forEach((f) => { f.style.width = f.dataset.w + '%'; });
+    charts.querySelectorAll('.colfill').forEach((f) => { f.style.height = f.dataset.h + '%'; });
+    charts.querySelectorAll('circle.seg').forEach((seg) => { seg.setAttribute('stroke-dasharray', seg.dataset.dash); });
+  }, 120));
+}
+document.getElementById('days').addEventListener('change', load);
+window.addEventListener('scroll', hideTip, { passive: true, capture: true });
+load();
+</script>
+{% endblock %}

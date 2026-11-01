@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% from "_icons.html" import theme_toggle %}
+{% block title %}Get started — Santa{% endblock %}
+{% block body %}
+<main class="onboard">
+  <section class="card onboard-card" aria-live="polite">
+    <div class="onboard-top">
+      <a class="brand" href="{{ url_for('pages.index') }}"><img src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="40" height="35"><span>Santa Scout</span></a>
+      <div style="display:flex;gap:6px;align-items:center">
+        {{ theme_toggle() }}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('pages.dashboard') }}" id="skip-all">Skip setup</a>
+      </div>
+    </div>
+    <div class="steps-bar" aria-hidden="true"><i id="steps-fill"></i></div>
+
+    <!-- Step 1 -->
+    <div class="step is-on" data-step="0">
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg></div>
+      <h1>What do you love to build?</h1>
+      <p>Pick a few — Santa finds the openings that fit. Skip it and you'll see everything.</p>
+      <div class="step-section">
+        <h3>Skills</h3>
+        <div class="chips" id="skill-chips"></div>
+        <form class="add-chip" id="skill-add"><input class="input" name="value" placeholder="Add another skill" aria-label="Add another skill"><button class="btn btn-secondary btn-sm" type="submit">Add</button></form>
+      </div>
+      <div class="step-section">
+        <h3>Where would you work?</h3>
+        <div class="chips" id="city-chips"></div>
+      </div>
+      <div class="step-section">
+        <h3>What are you after?</h3>
+        <div class="chips" id="type-chips"></div>
+      </div>
+      <div class="step-section">
+        <h3>How do you like to work?</h3>
+        <div class="chips" id="mode-chips"></div>
+      </div>
+      <div class="step-section">
+        <h3>Your name <span class="field-hint">optional</span></h3>
+        <input class="input" id="name-input" placeholder="What should Santa call you?" autocomplete="given-name">
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step" data-step="1">
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
+      <h1>Show me your work.</h1>
+      <p>Connect GitHub or bring your LinkedIn export — Santa picks up the skills you've actually used.</p>
+      <div class="connect-row">
+        <div class="connect-logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.6 18.3 5 18.3 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg></div>
+        <div class="grow"><strong>GitHub</strong><span>Santa scans your public repos every few hours</span>
+          <input class="input" id="github-input" placeholder="your-github-username" style="margin-top:8px;min-height:38px" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="connect-row">
+        <div class="connect-logo" style="color:#0a66c2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.4 20.5h-3.6v-5.6c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9v5.7H9.3V9h3.4v1.6c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5zM5.3 7.4a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.1 20.5H3.5V9h3.6zM22.2 0H1.8C.8 0 0 .8 0 1.7v20.6c0 .9.8 1.7 1.8 1.7h20.4c1 0 1.8-.8 1.8-1.7V1.7C24 .8 23.2 0 22.2 0z"/></svg></div>
+        <div class="grow"><strong>LinkedIn export</strong><span id="linkedin-status">Settings → Data privacy → "Get a copy of your data" → upload the .zip</span></div>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">Upload<input type="file" accept=".zip" id="linkedin-file" hidden></label>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step" data-step="2">
+      <div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+      <h1>How should I keep you in the loop?</h1>
+      <p>New matches and deadline nudges — so you never have to come check.</p>
+      <div class="connect-row">
+        <div class="connect-logo" style="color:#229ed9"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.2-8.3c.4-.4-.1-.6-.6-.2L6.1 13.6l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.6 3c.9-.3 1.7.2 1.3 1.3z"/></svg></div>
+        <div class="grow"><strong>Telegram</strong><span>Instant alerts for new matches</span></div>
+        <label class="switch"><input type="checkbox" data-channel="telegram" aria-label="Telegram alerts"><span></span></label>
+      </div>
+      <div class="connect-row" id="telegram-id-row" hidden>
+        <div class="grow"><span>Message <a href="https://t.me/internai_alerts_bot" target="_blank" rel="noopener">@internai_alerts_bot</a>, then paste your chat ID</span>
+          <input class="input" id="telegram-input" placeholder="Chat ID" inputmode="numeric" style="margin-top:8px;min-height:38px">
+        </div>
+      </div>
+      <div class="connect-row">
+        <div class="connect-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+        <div class="grow"><strong>Email</strong><span>A digest of your best matches</span></div>
+        <label class="switch"><input type="checkbox" data-channel="email" aria-label="Email alerts"><span></span></label>
+      </div>
+    </div>
+
+    <!-- Done -->
+    <div class="step onboard-done" data-step="3">
+      <img class="mascot mascot-float" src="{{ url_for('static', filename='assets/santa-mascot.svg') }}" alt="" width="160" height="140">
+      <h1 id="done-title">You're all set!</h1>
+      <p id="done-text">Santa is already looking. Your feed is ready.</p>
+      <div class="hero-actions" style="justify-content:center">
+        <a class="btn btn-primary" href="{{ url_for('pages.dashboard') }}">See what Santa found →</a>
+      </div>
+    </div>
+
+    <div class="onboard-foot" id="onboard-foot">
+      <button type="button" class="btn btn-ghost" id="back-btn" hidden>Back</button>
+      <span></span>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-ghost" id="skip-btn">Skip</button>
+        <button type="button" class="btn btn-primary" id="next-btn">Next →</button>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+const SKILLS = ['python', 'javascript', 'react', 'java', 'sql', 'node.js', 'machine learning', 'data analysis', 'typescript', 'c++', 'django', 'flask', 'figma', 'excel'];
+const CITIES = ['Remote', 'Bangalore', 'Hyderabad', 'Pune', 'Mumbai', 'Delhi', 'Gurgaon', 'Noida', 'Chennai'];
+const TYPES = [['internship', 'Internships'], ['job', 'Full-time jobs']];
+const MODES = [['remote', 'Remote'], ['hybrid', 'Hybrid'], ['onsite', 'In office']];
+const label = prettySkill;
+
+let prefs = emptyPrefs();
+let step = 0;
+const steps = document.querySelectorAll('.step');
+const nextBtn = document.getElementById('next-btn');
+const backBtn = document.getElementById('back-btn');
+const skipBtn = document.getElementById('skip-btn');
+
+function chipGroup(el, options, key, toLabel) {
+  el.innerHTML = '';
+  const all = [...new Set([...options, ...prefs[key].filter((v) => !options.includes(v))])];
+  all.forEach((value) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (prefs[key].includes(value) ? ' is-on' : '');
+    chip.textContent = toLabel(value);
+    chip.setAttribute('aria-pressed', String(prefs[key].includes(value)));
+    chip.addEventListener('click', () => {
+      prefs[key] = prefs[key].includes(value) ? prefs[key].filter((v) => v !== value) : [...prefs[key], value];
+      chipGroup(el, options, key, toLabel);
+    });
+    el.appendChild(chip);
+  });
+}
+
+function render() {
+  chipGroup(document.getElementById('skill-chips'), SKILLS, 'skills', label);
+  chipGroup(document.getElementById('city-chips'), CITIES, 'locations', (v) => v);
+  chipGroup(document.getElementById('type-chips'), TYPES.map(([v]) => v), 'listing_types', (v) => Object.fromEntries(TYPES)[v]);
+  chipGroup(document.getElementById('mode-chips'), MODES.map(([v]) => v), 'work_modes', (v) => Object.fromEntries(MODES)[v]);
+  document.getElementById('name-input').value = prefs.name || '';
+  document.getElementById('github-input').value = prefs.github_username || '';
+  document.getElementById('telegram-input').value = prefs.telegram_chat_id || '';
+  document.querySelectorAll('[data-channel]').forEach((box) => { box.checked = prefs.channels.includes(box.dataset.channel); });
+  document.getElementById('telegram-id-row').hidden = !prefs.channels.includes('telegram');
+}
+
+function show(index) {
+  step = index;
+  steps.forEach((el) => el.classList.toggle('is-on', Number(el.dataset.step) === index));
+  document.getElementById('steps-fill').style.width = `${(Math.min(index, 2) + 1) * 33.34}%`;
+  backBtn.hidden = index === 0 || index === 3;
+  document.getElementById('onboard-foot').hidden = index === 3;
+  document.getElementById('skip-all').hidden = index === 3;
+  nextBtn.innerHTML = index === 2 ? 'Get Started ✓' : `Next ${ICON.arrow}`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function collect() {
+  prefs.name = document.getElementById('name-input').value.trim();
+  prefs.github_username = document.getElementById('github-input').value.trim();
+  prefs.telegram_chat_id = document.getElementById('telegram-input').value.trim();
+}
+
+async function persist() {
+  collect();
+  saveLocalPrefs(prefs);
+  if (!SANTA.auth) return;
+  const body = { skills: prefs.skills, locations: prefs.locations, work_modes: prefs.work_modes, listing_types: prefs.listing_types, channels: prefs.channels };
+  if (prefs.name) body.name = prefs.name;
+  if (prefs.github_username) body.github_username = prefs.github_username;
+  if (prefs.telegram_chat_id) body.telegram_chat_id = prefs.telegram_chat_id;
+  await fetchJSON('/preferences', { method: 'PUT', body: JSON.stringify(body) });
+}
+
+async function finish() {
+  await persist();
+  const name = prefs.name || SANTA.name;
+  document.getElementById('done-title').textContent = name ? `You're all set, ${name}!` : "You're all set!";
+  document.getElementById('done-text').textContent = hasPrefs(prefs)
+    ? 'Santa is already sorting postings around what you love.'
+    : "No filters yet — you'll see every live posting. Tell Santa more anytime in Preferences.";
+  show(3);
+}
+
+nextBtn.addEventListener('click', async () => {
+  collect();
+  if (step === 2) return finish();
+  await persist();
+  show(step + 1);
+});
+skipBtn.addEventListener('click', () => { if (step === 2) finish(); else show(step + 1); });
+backBtn.addEventListener('click', () => show(step - 1));
+document.getElementById('skip-all').addEventListener('click', () => { collect(); saveLocalPrefs(prefs); });
+
+document.getElementById('skill-add').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const value = event.target.value.value.trim().toLowerCase();
+  if (value && !prefs.skills.includes(value)) prefs.skills.push(value);
+  event.target.reset();
+  collect();
+  render();
+});
+
+// Alerts need somewhere to send them — that's an account. Ask right when the
+// switch is flipped on, and leave it off if they'd rather not.
+document.querySelectorAll('[data-channel]').forEach((box) => {
+  box.addEventListener('change', async () => {
+    const channel = box.dataset.channel;
+    if (box.checked && !(await requireAccount('Alerts need an account so Santa knows where to reach you. It’s free.'))) {
+      box.checked = false;
+      return;
+    }
+    prefs.channels = box.checked ? [...new Set([...prefs.channels, channel])] : prefs.channels.filter((c) => c !== channel);
+    document.getElementById('telegram-id-row').hidden = !prefs.channels.includes('telegram');
+  });
+});
+
+document.getElementById('linkedin-file').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  const status = document.getElementById('linkedin-status');
+  if (!file) return;
+  if (!(await requireAccount('Importing LinkedIn saves your profile to an account so Santa can reuse it for your resume.'))) {
+    event.target.value = '';
+    return;
+  }
+  status.textContent = 'Reading your export…';
+  const formData = new FormData();
+  formData.append('export', file);
+  const response = await fetch('/preferences/linkedin-import', { method: 'POST', body: formData });
+  const data = await response.json().catch(() => ({}));
+  status.textContent = response.ok
+    ? `Imported ${data.position_count} positions and ${data.skill_count} skills ✓`
+    : (data.error || 'Could not import that file.');
+});
+
+window.addEventListener('santa:auth', async () => {
+  const server = await loadPrefs();
+  prefs = { ...prefs, ...Object.fromEntries(Object.entries(server).filter(([, v]) => Array.isArray(v) ? v.length : v)) };
+  render();
+});
+
+(async () => {
+  prefs = await loadPrefs();
+  prefs.channels = prefs.channels || [];
+  render();
+  show(0);
+})();
+</script>
+{% endblock %}

@@ -56,6 +56,8 @@ def _preferences(user: User) -> UserPreferences:
         locations=tuple(user.preferences.locations),
         minimum_stipend=user.preferences.minimum_stipend,
         channels=tuple(user.preferences.preferred_channels),
+        work_modes=tuple(user.preferences.work_modes),
+        listing_types=tuple(user.preferences.listing_types),
     )
 
 
