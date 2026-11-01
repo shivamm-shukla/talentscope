@@ -319,7 +319,9 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 @keyframes scale-in { from { opacity: 0; transform: scale(0.94) translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes ring { 0% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-12deg); } 45% { transform: rotate(8deg); } 60% { transform: rotate(-4deg); } 75%, 100% { transform: rotate(0); } }
 
-.page-enter { animation: rise 0.6s var(--ease) both; }
+/* No fill-mode: a lingering transform would turn this wrapper into the
+   containing block for position:fixed children (e.g. the sticky apply bar). */
+.page-enter { animation: rise 0.6s var(--ease); }
 /* .reveal children animate in, staggered, once they scroll into view
    (app.js adds .is-in via IntersectionObserver). */
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); transition-delay: calc(var(--i, 0) * 70ms); }
@@ -353,7 +355,7 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
 }
 .site-header.is-scrolled { border-bottom-color: var(--border); }
 .site-nav { display: flex; align-items: center; gap: 8px; }
-.site-nav .nav-text { color: var(--ink-soft); font-weight: 600; padding: 8px 10px; border-radius: var(--radius-pill); }
+.site-nav .nav-text { color: var(--ink-soft); font-weight: 600; padding: 8px 10px; border-radius: var(--radius-pill); white-space: nowrap; }
 .site-nav .nav-text:hover { color: var(--ink); background: var(--accent-soft); }
 
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 800; letter-spacing: -0.02em; font-size: 1.08rem; }
@@ -432,6 +434,19 @@ textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
   background: linear-gradient(120deg, var(--accent-soft), rgba(242, 123, 91, 0.14));
 }
 .cta-band .row { display: flex; align-items: center; gap: 16px; }
+@media (max-width: 560px) {
+  .site-header .brand small { display: none; }
+  .site-header .brand span { white-space: nowrap; }
+  .site-nav { gap: 4px; }
+  .site-nav .nav-text { padding: 8px 6px; }
+  .hero {
+    flex-direction: column-reverse; justify-content: flex-end; align-items: stretch; gap: 18px;
+    min-height: 640px; padding: 22px 20px 220px;
+    background-size: 230% auto; background-position: 80% 100%;
+  }
+  .hero::after { background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 70%); }
+  .hero-notif { position: relative; inset: auto; width: auto; }
+}
 .site-footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 32px var(--gutter) 40px; }
 
 /* Auth pages */
@@ -736,7 +751,7 @@ a.tile { color: inherit; }
 .brief-card h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .brief-card h3 svg { width: 18px; height: 18px; color: var(--accent); }
 @media (max-width: 960px) {
-  .detail-grid { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: minmax(0, 1fr); }
   .detail-aside { position: static; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 }
 @media (max-width: 560px) { .fit-grid { grid-template-columns: 1fr; } }
@@ -831,7 +846,7 @@ a.tile { color: inherit; }
 .insight-summary { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 14px; }
 .big-number { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; }
 @media (max-width: 1100px) { .charts { grid-template-columns: 1fr 1fr; } .charts .chart-card:last-child { grid-column: 1 / -1; } }
-@media (max-width: 720px) { .charts { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .charts { grid-template-columns: minmax(0, 1fr); } }
 
 /* =========================================================================
    Ask Santa (chat)
@@ -889,7 +904,7 @@ a.tile { color: inherit; }
 .save-bar .btn { background: var(--primary-btn-ink); color: var(--primary-btn); }
 .lock-note { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); font-size: 0.84rem; color: var(--ink-soft); margin-bottom: 8px; }
 .lock-note svg { width: 16px; height: 16px; color: var(--accent); flex: none; }
-@media (max-width: 960px) { .settings-grid { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .settings-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 720px) { .save-bar { bottom: calc(92px + env(safe-area-inset-bottom)); } }
 
 /* =========================================================================
@@ -977,7 +992,7 @@ a.tile { color: inherit; }
 }
 .versions { display: flex; flex-wrap: wrap; gap: 8px; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-@media (max-width: 960px) { .resume-grid { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .resume-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .locked { display: grid; justify-items: center; text-align: center; gap: 12px; padding: clamp(32px, 7vw, 72px) 20px; }
 .locked img { width: 96px; }
