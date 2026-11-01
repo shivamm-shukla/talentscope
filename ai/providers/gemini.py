@@ -8,9 +8,32 @@ from core.models import Answer, JobPosting, QueryContext
 
 GenerateFn = Callable[[str], str]
 
-# Comfortably under gunicorn's worker timeout, so a slow or stuck call fails
-# as a normal error (502 to the user) instead of the worker being killed.
-GEMINI_TIMEOUT_MS = 25_000
+# Below gunicorn's 60s worker timeout, so a slow call fails as a normal
+# error (502 to the user) instead of the worker being killed. Also sent to
+# Gemini as the server-side deadline.
+GEMINI_TIMEOUT_MS = 45_000
+# Briefs are 3-5 sentences and resumes about a page; capping output keeps
+# latency predictable.
+GEMINI_MAX_OUTPUT_TOKENS = 2048
+
+
+def _thinking_options(types) -> list[object | None]:
+    """Ways to keep "thinking" short, most effective first.
+
+    Thinking models spend many seconds reasoning before they write — enough
+    to blow the deadline on a 5-sentence brief. Models differ in what they
+    accept (2.x: a token budget, 3.x: a level), so try each and fall back to
+    the model default if neither is supported.
+    """
+    return [
+        types.ThinkingConfig(thinking_budget=0),
+        types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW),
+        None,
+    ]
+
+
+def _is_thinking_rejection(error: Exception) -> bool:
+    return getattr(error, "code", None) == 400 and "think" in str(error).lower()
 
 
 def gemini_generate(api_key: str, model: str) -> GenerateFn:
@@ -20,20 +43,40 @@ def gemini_generate(api_key: str, model: str) -> GenerateFn:
     SDK is end-of-life and talked gRPC, which hung on Render until gunicorn
     killed the worker — every AI feature failed with no response.
     """
-    client = None
+    state: dict[str, object] = {}
 
     def generate(prompt: str) -> str:
-        nonlocal client
-        if client is None:
-            from google import genai
-            from google.genai import types
+        from google import genai
+        from google.genai import errors, types
 
-            client = genai.Client(
+        if "client" not in state:
+            state["client"] = genai.Client(
                 api_key=api_key,
                 http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
             )
-        response = client.models.generate_content(model=model, contents=prompt)
-        return response.text or ""
+            state["options"] = _thinking_options(types)
+        client = state["client"]
+        options = state["options"]
+        while True:
+            thinking = options[0]
+            config = types.GenerateContentConfig(
+                max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=True
+                ),
+                **({"thinking_config": thinking} if thinking is not None else {}),
+            )
+            try:
+                response = client.models.generate_content(
+                    model=model, contents=prompt, config=config
+                )
+            except errors.ClientError as error:
+                # Remember what this model rejects so later calls skip it.
+                if thinking is not None and _is_thinking_rejection(error):
+                    options.pop(0)
+                    continue
+                raise
+            return response.text or ""
 
     return generate
 
